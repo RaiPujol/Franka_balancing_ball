@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+logs/
+calib.json
+panda_paddle_ball.xml
+.DS_Store
