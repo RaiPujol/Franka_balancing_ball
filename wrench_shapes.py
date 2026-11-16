@@ -61,7 +61,7 @@ def run(shape, *, config=None, radius_m=.02, period_s=8., video=None,
         Path(video).parent.mkdir(parents=True,exist_ok=True)
         renderer=mujoco.Renderer(model,height=480,width=640)
         camera=mujoco.MjvCamera();camera.lookat[:]=[.32,0.,.46];camera.distance=1.6
-        camera.azimuth=45;camera.elevation=-35
+        camera.azimuth=135;camera.elevation=-35
         writer=imageio.get_writer(video,fps=24,codec='libx264',macro_block_size=16)
     lim=max(radius_m*1.9,.04); cx,cy,h=800,265,128
     def point(pos): return (int(round(cx+h*pos[0]/lim)),int(round(cy-h*pos[1]/lim)))

@@ -115,7 +115,7 @@ def run_one(offset,task,*,video=None,label='',scene=None,force_std=.005,torque_s
     max_path_error=0.;max_tilt=0.;min_margin=np.inf
     if video:
         renderer=mujoco.Renderer(model,height=480,width=640)
-        camera=mujoco.MjvCamera();camera.lookat[:]=[.32,0,.46];camera.distance=1.6;camera.azimuth=45;camera.elevation=-35
+        camera=mujoco.MjvCamera();camera.lookat[:]=[.32,0,.46];camera.distance=1.6;camera.azimuth=135;camera.elevation=-35
     try:
         for _ in range(int(np.ceil(duration/dt))):
             mujoco.mj_forward(model,data);elapsed=float(data.time-start)

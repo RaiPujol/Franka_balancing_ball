@@ -28,11 +28,11 @@ DEFAULTS={
  'platform_scale_m_per_cad_unit':.001,
  'tray_mass_kg':.09277,  # user-measured mass of the complete printed STL
  'bolt_mass_kg':0.,  # unmeasured bolt(s), optionally set once weighed
- 'mount_offset_m':[-.0855,0.,.0805], # illustrative top-center pose in hand frame
+ 'mount_offset_m':[.0855,0.,.0805], # illustrative top-center pose in hand frame
  # Orient the 35 mm tab width across the 35 mm jaw opening and point the
- # platform along hand -x. This removes an initial ball/hand overlap in the
- # CAD proxy, but has NOT been verified against the physical bolted mounting.
- 'mount_quat_wxyz':[0.,.7071067811865476,-.7071067811865476,0.],
+ # platform along hand +x, away from the robot base at the default home pose.
+ # The attachment pose has NOT been verified against the physical bolted mount.
+ 'mount_quat_wxyz':[0.,.7071067811865476,.7071067811865476,0.],
  'finger_half_width_m':.0175,
  'ball_diameter_m':.04267,'ball_mass_kg':.04593,
  'ball_initial_offset_m':[0.,0.],'ball_clearance_m':.0002,

@@ -18,6 +18,16 @@ class ActualPlatformSceneTests(unittest.TestCase):
         np.testing.assert_allclose(R.T@(d.xpos[meta['ball_body_id']]-d.site_xpos[meta['tray_site_id']]),[0.,0.,.04267/2+.0002],atol=1e-10)
         self.assertEqual(d.ncon,0,'nominal ball/robot should start without contact')
 
+    def test_plate_extends_away_from_robot_base_at_home(self):
+        m,d,meta=stl_scene.build_model()
+        base=d.xpos[m.body('link0').id][:2]
+        hand=d.xpos[m.body('hand').id][:2]
+        top=d.site_xpos[meta['tray_site_id']][:2]
+        # This verifies outward extension only at the configured home pose;
+        # an arm trajectory does not maintain a globally radial orientation.
+        self.assertGreater(np.dot(top-hand,hand-base),0.)
+        np.testing.assert_allclose(d.site_xmat[meta['tray_site_id']].reshape(3,3)[:,2],[0,0,1],atol=1e-6)
+
     def test_imported_mesh_alignment_after_mujoco_recentering(self):
         m,d,meta=stl_scene.build_model();mid=m.mesh('actual_platform_visual').id;gid=m.geom('platform_visual').id
         a,n=int(m.mesh_vertadr[mid]),int(m.mesh_vertnum[mid]);v=m.mesh_vert[a:a+n]

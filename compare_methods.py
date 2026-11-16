@@ -42,6 +42,8 @@ def main():
     p.add_argument('--method',required=True,choices=['pd','kalman_pd','lqr','mpc'])
     p.add_argument('--lqr-kp',type=float,default=.6)
     p.add_argument('--lqr-kd',type=float,default=.8)
+    p.add_argument('--tray-mass',type=float,default=.12,
+                   help='nominal plant tray mass in kg, used for observer-model comparisons')
     p.add_argument('--only-task',choices=TASKS)
     p.add_argument('--only-case',choices=[c[0] for c in CASES])
     p.add_argument('--only-seed',type=int,choices=[s[0] for s in SEEDS])
@@ -62,7 +64,7 @@ def main():
                 holder=[]
                 def factory(model,data,config=None,**kwargs):
                     cfg=dict(config or {})
-                    cfg['tray_mass_kg']=float(cfg.get('tray_mass_kg',.12))*mass_factor
+                    cfg['tray_mass_kg']=float(cfg.get('tray_mass_kg',args.tray_mass))*mass_factor
                     kwargs['torque_bias']=(0.,bias,0.)
                     if args.method!='pd':
                         kwargs.update(measurement_std=.002,accel_std=.3,max_prediction=.15)
@@ -77,7 +79,7 @@ def main():
                 started=time.perf_counter()
                 try:
                     if task in ('circle','rounded_square','figure_eight'):
-                        r=shape_run(task,config={'ball_initial_offset_m':list(offset)},
+                        r=shape_run(task,config={'ball_initial_offset_m':list(offset),'tray_mass_kg':args.tray_mass},
                             period_s=16. if task=='rounded_square' else 8.,output_dir=root/f'{task}_{case}_{seed}',
                             sensor_model='joint_torque',joint_torque_std=noise,joint_velocity_std=.0001,
                             delay_s=delay,seed=seed,controller_factory=factory)
@@ -88,7 +90,7 @@ def main():
                             stop_reason=r['stop_reason'],edge_margin_m=r['minimum_full_footprint_margin_m'],
                             estimator_rms_m=r['estimation_error_rms_m'])
                     else:
-                        r=center_run(offset,task,sensor_model='joint_torque',joint_torque_std=noise,
+                        r=center_run(offset,task,scene={'tray_mass_kg':args.tray_mass},sensor_model='joint_torque',joint_torque_std=noise,
                             joint_velocity_std=.0001,delay_s=delay,seed=seed,controller_factory=factory)
                         record.update(containment_pass=bool(r['completed'] and r['minimum_full_footprint_edge_margin_m']>=0),
                             performance_pass=r['success'],last_second_max_m=r['last_second_max_true_error_m'],
