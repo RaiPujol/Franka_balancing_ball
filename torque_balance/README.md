@@ -31,6 +31,7 @@ Copy `ball_core.py` and `franka_ball_balance.py` to the robot PC. Partner on the
 ```bash
 python3 franka_ball_balance.py grip                 # fingers close on the paddle handle
 python3 franka_ball_balance.py teach --seconds 30   # guide the paddle level, in free space
+python3 franka_ball_balance.py watch                # live torque change per joint [mNm]; press on the paddle
 python3 franka_ball_balance.py log --seconds 10     # joint angles + torques -> logs/*.csv, noise floor
 python3 franka_ball_balance.py tare                 # NO ball. Paddle rocks 60 s (max 4 deg)
 python3 franka_ball_balance.py calibrate            # ball at centre, then at +8 cm

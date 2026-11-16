@@ -8,6 +8,7 @@ Run the steps in this order (each one saves into calib.json):
 
     python3 franka_ball_balance.py grip                 # close the fingers on the paddle handle
     python3 franka_ball_balance.py teach --seconds 30   # guide the paddle to level, in free space
+    python3 franka_ball_balance.py watch                # LIVE torque change per joint while you press on the paddle
     python3 franka_ball_balance.py log --seconds 10     # MEASURE: joint angles + torques -> csv, noise floor
     python3 franka_ball_balance.py tare                 # no ball: paddle rocks 60 s, learns the no-ball torques
     python3 franka_ball_balance.py calibrate            # ball at centre, then +8 cm: prints the torque change
@@ -160,9 +161,57 @@ def teach(io, path, seconds, args):
     print(f"saved to {path}. Next: log, then tare.")
 
 
+def watch(io, seconds, rate_hz):
+    """Live readout of the joint torque CHANGE, for pressing on the paddle by hand.
+    The arm is not commanded: it just holds wherever it is. No calibration needed."""
+    def average(n):
+        tau = np.array([_sample(io) for _ in range(n)])
+        return tau.mean(axis=0), tau.std(axis=0)
+
+    def take_zero():
+        print("\nzeroing for 1 s, hands off the paddle ...")
+        zero, noise = average(max(int(rate_hz), 2))
+        print("change in joint torque [mNm]. Enter = zero again, Ctrl-C = quit.")
+        print("noise  " + "".join(f"{v * 1000:8.1f}" for v in noise) + "   (1 sigma per raw sample)")
+        print("joint  " + "".join(f"{i:>8d}" for i in range(1, 8)))
+        return zero
+
+    rezero = threading.Event()
+
+    def keys():
+        while True:
+            try:
+                input()
+            except EOFError:
+                return
+            rezero.set()
+
+    threading.Thread(target=keys, daemon=True).start()
+    block = max(int(round(rate_hz / 10.0)), 1)          # one printed line = 0.1 s average
+    zero = take_zero()
+    peak = np.zeros(7)
+    try:
+        for _ in range(int(seconds * 10)):
+            if rezero.is_set():
+                rezero.clear()
+                zero, peak = take_zero(), np.zeros(7)
+            d = (average(block)[0] - zero) * 1000.0
+            peak = np.maximum(peak, np.abs(d))
+            print("\r       " + "".join(f"{v:+8.0f}" for v in d), end="", flush=True)
+    except KeyboardInterrupt:
+        pass
+    print("\npeak   " + "".join(f"{v:8.0f}" for v in peak) + "   (largest change seen since the last zero)")
+
+
+def _sample(io):
+    tau = io.read()["tau"]
+    io.rate.sleep()
+    return tau
+
+
 def main():
     ap = argparse.ArgumentParser(description="Torque-only ball balancing on the Franka.")
-    ap.add_argument("step", choices=["grip", "release", "teach", "log", "tare", "calibrate", "locate", "balance"])
+    ap.add_argument("step", choices=["grip", "release", "teach", "watch", "log", "tare", "calibrate", "locate", "balance"])
     ap.add_argument("--calib", default=os.path.join(HERE, "calib.json"))
     ap.add_argument("--seconds", type=float, default=None, help="Duration of the step.")
     ap.add_argument("--rate", type=float, default=50.0, help="Loop rate in Hz (teach). Robot state updates at 100 Hz.")
@@ -176,7 +225,7 @@ def main():
     args = ap.parse_args()
 
     calib = bc.Calib.load(args.calib) if os.path.exists(args.calib) else None
-    rate = calib.rate_hz if calib and args.step not in ("teach", "log") else args.rate
+    rate = calib.rate_hz if calib and args.step not in ("teach", "log", "watch") else args.rate
     io = FrankaIO(rate)
     stamp = time.strftime("%m%d_%H%M%S")
     log_name = os.path.join(HERE, "logs", f"{args.step}_{stamp}.npz")
@@ -189,6 +238,9 @@ def main():
         return
     if args.step == "teach":
         teach(io, args.calib, args.seconds or 30.0, args)
+        return
+    if args.step == "watch":
+        watch(io, args.seconds or 300.0, args.rate)
         return
     check_kinematics(io)
     if args.step == "log":
