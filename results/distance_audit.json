@@ -1,0 +1,676 @@
+[
+  {
+    "task": "circle",
+    "completed": true,
+    "stop_reason": null,
+    "integrator_steps": 13775,
+    "minimum_distances": {
+      "plate_vs_fingers": {
+        "distance_m": 0.0001576136385697335,
+        "distance_capped_at_m": 0.3,
+        "time_s": 6.7599999999994775,
+        "geom_ids": [
+          83,
+          76
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_76"
+        ]
+      },
+      "tab_vs_fingers_intentionally_filtered": {
+        "distance_m": -9.426373225020101e-08,
+        "distance_capped_at_m": 0.3,
+        "time_s": 10.800000000000276,
+        "geom_ids": [
+          84,
+          80
+        ],
+        "bodies": [
+          "platform_tab",
+          "right_finger"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_80"
+        ]
+      },
+      "ball_vs_robot": {
+        "distance_m": 0.023059523776023307,
+        "distance_capped_at_m": 0.3,
+        "time_s": 8.499999999999508,
+        "geom_ids": [
+          85,
+          65
+        ],
+        "bodies": [
+          "ball",
+          "hand"
+        ],
+        "geom_names": [
+          "ball_geom",
+          "unnamed_65"
+        ]
+      },
+      "plate_vs_other_arm_links": {
+        "distance_m": 0.1361115281121946,
+        "distance_capped_at_m": 0.3,
+        "time_s": 4.499999999999726,
+        "geom_ids": [
+          83,
+          50
+        ],
+        "bodies": [
+          "tray",
+          "link6"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_50"
+        ]
+      },
+      "tab_vs_other_arm_links": {
+        "distance_m": 0.13616023004513844,
+        "distance_capped_at_m": 0.3,
+        "time_s": 6.999999999999451,
+        "geom_ids": [
+          84,
+          50
+        ],
+        "bodies": [
+          "platform_tab",
+          "link6"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_50"
+        ]
+      },
+      "robot_vs_ground_excluding_fixed_base": {
+        "distance_m": 0.1409959322147048,
+        "distance_capped_at_m": 0.3,
+        "time_s": 1.7500000000000013,
+        "geom_ids": [
+          0,
+          14
+        ],
+        "bodies": [
+          "world",
+          "link1"
+        ],
+        "geom_names": [
+          "ground",
+          "unnamed_14"
+        ]
+      },
+      "plate_vs_hand_and_link7": {
+        "distance_m": 0.01473307229513201,
+        "distance_capped_at_m": 0.3,
+        "time_s": 17.650000000001096,
+        "geom_ids": [
+          83,
+          65
+        ],
+        "bodies": [
+          "tray",
+          "hand"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_65"
+        ]
+      },
+      "tab_vs_hand_and_link7": {
+        "distance_m": 0.014541515669366586,
+        "distance_capped_at_m": 0.3,
+        "time_s": 19.999999999999794,
+        "geom_ids": [
+          84,
+          65
+        ],
+        "bodies": [
+          "platform_tab",
+          "hand"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_65"
+        ]
+      },
+      "plate_vs_ground": {
+        "distance_m": 0.3,
+        "distance_capped_at_m": 0.3,
+        "time_s": 0.0,
+        "geom_ids": [
+          83,
+          0
+        ],
+        "bodies": [
+          "tray",
+          "world"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "ground"
+        ]
+      },
+      "tab_vs_ground": {
+        "distance_m": 0.3,
+        "distance_capped_at_m": 0.3,
+        "time_s": 0.0,
+        "geom_ids": [
+          84,
+          0
+        ],
+        "bodies": [
+          "platform_tab",
+          "world"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "ground"
+        ]
+      },
+      "robot_self_nonadjacent": {
+        "distance_m": 0.022595546214149533,
+        "distance_capped_at_m": 0.3,
+        "time_s": 4.749999999999699,
+        "geom_ids": [
+          32,
+          59
+        ],
+        "bodies": [
+          "link5",
+          "link7"
+        ],
+        "geom_names": [
+          "unnamed_32",
+          "unnamed_59"
+        ]
+      }
+    },
+    "initial_plate_finger_pairs": [
+      {
+        "distance_m": 0.00015979905425559887,
+        "geom_ids": [
+          83,
+          68
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178525,
+        "geom_ids": [
+          83,
+          69
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.027206800620433243,
+        "geom_ids": [
+          83,
+          70
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.02398353601952821,
+        "geom_ids": [
+          83,
+          71
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.018314202139323627,
+        "geom_ids": [
+          83,
+          72
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178529,
+        "geom_ids": [
+          83,
+          73
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.0001576136385698562,
+        "geom_ids": [
+          83,
+          76
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178523,
+        "geom_ids": [
+          83,
+          77
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.023983536019528205,
+        "geom_ids": [
+          83,
+          78
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.02720680062043323,
+        "geom_ids": [
+          83,
+          79
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178522,
+        "geom_ids": [
+          83,
+          80
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.01831420213932361,
+        "geom_ids": [
+          83,
+          81
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      }
+    ],
+    "notes": [
+      "Flat deck and solid tab proxies, not the full STL contact mesh.",
+      "Pairs include filtered collision pairs; tab-finger touching is intentionally filtered.",
+      "Plate-finger sampled each 2 ms integration step; other categories sampled each 50 ms.",
+      "Only modeled ground is checked; physical table, surrounding objects, cable, and human are not modeled.",
+      "Distance and penetration are approximate for the modeled convex geoms; sampling cannot guarantee continuous clearance.",
+      "Adjacent robot bodies are excluded from self-distance category as normally attached."
+    ]
+  },
+  {
+    "task": "carrying",
+    "completed": true,
+    "stop_reason": null,
+    "integrator_steps": 7200,
+    "minimum_distances": {
+      "plate_vs_fingers": {
+        "distance_m": 0.00015761363856973693,
+        "distance_capped_at_m": 0.3,
+        "time_s": 9.489999999999839,
+        "geom_ids": [
+          83,
+          76
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_76"
+        ]
+      },
+      "tab_vs_fingers_intentionally_filtered": {
+        "distance_m": -9.512762524217101e-08,
+        "distance_capped_at_m": 0.3,
+        "time_s": 10.550000000000193,
+        "geom_ids": [
+          84,
+          81
+        ],
+        "bodies": [
+          "platform_tab",
+          "right_finger"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_81"
+        ]
+      },
+      "ball_vs_robot": {
+        "distance_m": 0.030873968894787183,
+        "distance_capped_at_m": 0.3,
+        "time_s": 1.0000000000000007,
+        "geom_ids": [
+          85,
+          65
+        ],
+        "bodies": [
+          "ball",
+          "hand"
+        ],
+        "geom_names": [
+          "ball_geom",
+          "unnamed_65"
+        ]
+      },
+      "plate_vs_other_arm_links": {
+        "distance_m": 0.13611152811219454,
+        "distance_capped_at_m": 0.3,
+        "time_s": 4.999999999999671,
+        "geom_ids": [
+          83,
+          50
+        ],
+        "bodies": [
+          "tray",
+          "link6"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_50"
+        ]
+      },
+      "tab_vs_other_arm_links": {
+        "distance_m": 0.13616022786698845,
+        "distance_capped_at_m": 0.3,
+        "time_s": 4.799999999999693,
+        "geom_ids": [
+          84,
+          50
+        ],
+        "bodies": [
+          "platform_tab",
+          "link6"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_50"
+        ]
+      },
+      "robot_vs_ground_excluding_fixed_base": {
+        "distance_m": 0.14099593221470483,
+        "distance_capped_at_m": 0.3,
+        "time_s": 0.9500000000000007,
+        "geom_ids": [
+          0,
+          14
+        ],
+        "bodies": [
+          "world",
+          "link1"
+        ],
+        "geom_names": [
+          "ground",
+          "unnamed_14"
+        ]
+      },
+      "plate_vs_hand_and_link7": {
+        "distance_m": 0.014733072295131983,
+        "distance_capped_at_m": 0.3,
+        "time_s": 9.099999999999708,
+        "geom_ids": [
+          83,
+          65
+        ],
+        "bodies": [
+          "tray",
+          "hand"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "unnamed_65"
+        ]
+      },
+      "tab_vs_hand_and_link7": {
+        "distance_m": 0.014541515669366612,
+        "distance_capped_at_m": 0.3,
+        "time_s": 10.500000000000176,
+        "geom_ids": [
+          84,
+          65
+        ],
+        "bodies": [
+          "platform_tab",
+          "hand"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "unnamed_65"
+        ]
+      },
+      "plate_vs_ground": {
+        "distance_m": 0.3,
+        "distance_capped_at_m": 0.3,
+        "time_s": 0.0,
+        "geom_ids": [
+          83,
+          0
+        ],
+        "bodies": [
+          "tray",
+          "world"
+        ],
+        "geom_names": [
+          "tray_plate",
+          "ground"
+        ]
+      },
+      "tab_vs_ground": {
+        "distance_m": 0.3,
+        "distance_capped_at_m": 0.3,
+        "time_s": 0.0,
+        "geom_ids": [
+          84,
+          0
+        ],
+        "bodies": [
+          "platform_tab",
+          "world"
+        ],
+        "geom_names": [
+          "tab_collision_proxy",
+          "ground"
+        ]
+      },
+      "robot_self_nonadjacent": {
+        "distance_m": 0.022588432173621473,
+        "distance_capped_at_m": 0.3,
+        "time_s": 3.2499999999998637,
+        "geom_ids": [
+          32,
+          59
+        ],
+        "bodies": [
+          "link5",
+          "link7"
+        ],
+        "geom_names": [
+          "unnamed_32",
+          "unnamed_59"
+        ]
+      }
+    },
+    "initial_plate_finger_pairs": [
+      {
+        "distance_m": 0.00015979905425559887,
+        "geom_ids": [
+          83,
+          68
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178525,
+        "geom_ids": [
+          83,
+          69
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.027206800620433243,
+        "geom_ids": [
+          83,
+          70
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.02398353601952821,
+        "geom_ids": [
+          83,
+          71
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.018314202139323627,
+        "geom_ids": [
+          83,
+          72
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178529,
+        "geom_ids": [
+          83,
+          73
+        ],
+        "bodies": [
+          "tray",
+          "left_finger"
+        ]
+      },
+      {
+        "distance_m": 0.0001576136385698562,
+        "geom_ids": [
+          83,
+          76
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178523,
+        "geom_ids": [
+          83,
+          77
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.023983536019528205,
+        "geom_ids": [
+          83,
+          78
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.02720680062043323,
+        "geom_ids": [
+          83,
+          79
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.013054118124178522,
+        "geom_ids": [
+          83,
+          80
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      },
+      {
+        "distance_m": 0.01831420213932361,
+        "geom_ids": [
+          83,
+          81
+        ],
+        "bodies": [
+          "tray",
+          "right_finger"
+        ]
+      }
+    ],
+    "notes": [
+      "Flat deck and solid tab proxies, not the full STL contact mesh.",
+      "Pairs include filtered collision pairs; tab-finger touching is intentionally filtered.",
+      "Plate-finger sampled each 2 ms integration step; other categories sampled each 50 ms.",
+      "Only modeled ground is checked; physical table, surrounding objects, cable, and human are not modeled.",
+      "Distance and penetration are approximate for the modeled convex geoms; sampling cannot guarantee continuous clearance.",
+      "Adjacent robot bodies are excluded from self-distance category as normally attached."
+    ]
+  }
+]
