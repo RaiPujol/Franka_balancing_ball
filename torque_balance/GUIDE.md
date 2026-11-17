@@ -5,9 +5,9 @@ Only the last section (F) moves the arm: keep a partner on the e-stop.
 
 ## A. Bring up the station (once per session)
 1. Flip the FCI switch UP, turn on the Control PC (blue light) and the user PC. Log in as `student` (password `16-662`).
-2. Terminal 1: `ssh -X student@iam-<name>`, then `google-chrome`, open `172.16.0.2` (admin / shavethepandas), click unlock. Wait for blue lights.
+2. Terminal 1: `ssh -X student@iam-sneezy` (the CONTROL PC; name is on its casing), then `google-chrome`, open `172.16.0.2` (admin / shavethepandas), click unlock. Wait for blue lights.
 3. Terminal 2: `roscore`
-4. Terminal 3: `cd /home/student/16662_RobotAutonomy && bash ./bash_scripts/start_control_pc.sh -u student -i iam-<name>` (leave running; restart after any e-stop)
+4. Terminal 3: `cd /home/student/Documents/frankapy && bash ./bash_scripts/start_control_pc.sh -u student -i iam-sneezy` (leave running; restart after any e-stop)
 5. Terminal 4: `cd /home/student/16662_RobotAutonomy && bash run_docker.sh`
 6. Terminal 5: `cd /home/student/16662_RobotAutonomy && bash terminal_docker.sh` (everything below runs here, inside the container)
 
@@ -19,6 +19,7 @@ Outside docker: `cd /home/student/16662_RobotAutonomy/src/devel_packages && git 
     ls
 
 ## C. Only read torques (no motion, no setup)
+    python3 check_setup.py     # checks roscore, server and robot, says which step to redo
     python3 torque_watch.py
 
 Hands off for the 2 s zeroing, then press on the paddle. Prints the torque change of joints 1 to 7 in mNm.
