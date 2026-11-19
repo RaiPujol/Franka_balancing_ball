@@ -6,9 +6,9 @@
     "integrator_steps": 13775,
     "minimum_distances": {
       "plate_vs_fingers": {
-        "distance_m": 0.00015761363856968443,
+        "distance_m": 0.00015761363856966348,
         "distance_capped_at_m": 0.3,
-        "time_s": 18.226000000000777,
+        "time_s": 3.1619999999998734,
         "geom_ids": [
           83,
           68
@@ -23,9 +23,9 @@
         ]
       },
       "tab_vs_fingers_intentionally_filtered": {
-        "distance_m": -7.943069000283727e-08,
+        "distance_m": -3.282703167248026e-05,
         "distance_capped_at_m": 0.3,
-        "time_s": 18.550000000000598,
+        "time_s": 0.1500000000000001,
         "geom_ids": [
           84,
           80
@@ -40,9 +40,9 @@
         ]
       },
       "ball_vs_robot": {
-        "distance_m": 0.02643155540314683,
+        "distance_m": 0.06676052217047654,
         "distance_capped_at_m": 0.3,
-        "time_s": 8.449999999999491,
+        "time_s": 8.499999999999508,
         "geom_ids": [
           85,
           65
@@ -57,7 +57,7 @@
         ]
       },
       "plate_vs_other_arm_links": {
-        "distance_m": 0.1361718462001156,
+        "distance_m": 0.136171844443988,
         "distance_capped_at_m": 0.3,
         "time_s": 22.09999999999863,
         "geom_ids": [
@@ -74,7 +74,7 @@
         ]
       },
       "tab_vs_other_arm_links": {
-        "distance_m": 0.1361602470306366,
+        "distance_m": 0.13616024578122213,
         "distance_capped_at_m": 0.3,
         "time_s": 6.999999999999451,
         "geom_ids": [
@@ -91,9 +91,9 @@
         ]
       },
       "robot_vs_ground_excluding_fixed_base": {
-        "distance_m": 0.1409959322147048,
+        "distance_m": 0.14099593221470483,
         "distance_capped_at_m": 0.3,
-        "time_s": 12.000000000000677,
+        "time_s": 0.35000000000000026,
         "geom_ids": [
           0,
           14
@@ -108,9 +108,9 @@
         ]
       },
       "plate_vs_hand_and_link7": {
-        "distance_m": 0.014716676590920987,
+        "distance_m": 0.014716676590921029,
         "distance_capped_at_m": 0.3,
-        "time_s": 23.64999999999777,
+        "time_s": 5.049999999999666,
         "geom_ids": [
           83,
           65
@@ -125,9 +125,9 @@
         ]
       },
       "tab_vs_hand_and_link7": {
-        "distance_m": 0.014541515669366609,
+        "distance_m": 0.014541515669366595,
         "distance_capped_at_m": 0.3,
-        "time_s": 10.000000000000009,
+        "time_s": 7.299999999999418,
         "geom_ids": [
           84,
           65
@@ -176,7 +176,7 @@
         ]
       },
       "robot_self_nonadjacent": {
-        "distance_m": 0.022659294854429208,
+        "distance_m": 0.022655223409141192,
         "distance_capped_at_m": 0.3,
         "time_s": 4.599999999999715,
         "geom_ids": [
@@ -195,7 +195,7 @@
     },
     "initial_plate_finger_pairs": [
       {
-        "distance_m": 0.0001576136385699028,
+        "distance_m": 0.0001576136385698919,
         "geom_ids": [
           83,
           68
@@ -206,7 +206,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264847,
         "geom_ids": [
           83,
           69
@@ -217,7 +217,7 @@
         ]
       },
       {
-        "distance_m": 0.023983536019528094,
+        "distance_m": 0.018011385288200375,
         "geom_ids": [
           83,
           70
@@ -228,7 +228,7 @@
         ]
       },
       {
-        "distance_m": 0.02720680062043315,
+        "distance_m": 0.022122612865572655,
         "geom_ids": [
           83,
           71
@@ -239,7 +239,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264846,
         "geom_ids": [
           83,
           72
@@ -250,7 +250,7 @@
         ]
       },
       {
-        "distance_m": 0.018314202139323554,
+        "distance_m": 0.014717676447048345,
         "geom_ids": [
           83,
           73
@@ -261,7 +261,7 @@
         ]
       },
       {
-        "distance_m": 0.0001597990542556198,
+        "distance_m": 0.00015979905425563077,
         "geom_ids": [
           83,
           76
@@ -272,7 +272,7 @@
         ]
       },
       {
-        "distance_m": 0.013054118124178418,
+        "distance_m": 0.007184010022264852,
         "geom_ids": [
           83,
           77
@@ -283,7 +283,7 @@
         ]
       },
       {
-        "distance_m": 0.027206800620433156,
+        "distance_m": 0.022122612865572672,
         "geom_ids": [
           83,
           78
@@ -294,7 +294,7 @@
         ]
       },
       {
-        "distance_m": 0.023983536019528094,
+        "distance_m": 0.018011385288200378,
         "geom_ids": [
           83,
           79
@@ -305,7 +305,7 @@
         ]
       },
       {
-        "distance_m": 0.018314202139323565,
+        "distance_m": 0.014717676447048371,
         "geom_ids": [
           83,
           80
@@ -316,7 +316,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264853,
         "geom_ids": [
           83,
           81
@@ -343,9 +343,9 @@
     "integrator_steps": 7200,
     "minimum_distances": {
       "plate_vs_fingers": {
-        "distance_m": 0.00015761363856970747,
+        "distance_m": 0.00015761363856966646,
         "distance_capped_at_m": 0.3,
-        "time_s": 5.801999999999583,
+        "time_s": 7.833999999999359,
         "geom_ids": [
           83,
           68
@@ -360,9 +360,9 @@
         ]
       },
       "tab_vs_fingers_intentionally_filtered": {
-        "distance_m": -8.875693768207712e-08,
+        "distance_m": -9.057430119594702e-08,
         "distance_capped_at_m": 0.3,
-        "time_s": 10.950000000000326,
+        "time_s": 7.299999999999418,
         "geom_ids": [
           84,
           81
@@ -377,7 +377,7 @@
         ]
       },
       "ball_vs_robot": {
-        "distance_m": 0.032271480462195974,
+        "distance_m": 0.07249909241038846,
         "distance_capped_at_m": 0.3,
         "time_s": 0.0,
         "geom_ids": [
@@ -394,7 +394,7 @@
         ]
       },
       "plate_vs_other_arm_links": {
-        "distance_m": 0.13617191979749146,
+        "distance_m": 0.1361719172726998,
         "distance_capped_at_m": 0.3,
         "time_s": 13.750000000001261,
         "geom_ids": [
@@ -411,7 +411,7 @@
         ]
       },
       "tab_vs_other_arm_links": {
-        "distance_m": 0.13616023897487206,
+        "distance_m": 0.13616023801225152,
         "distance_capped_at_m": 0.3,
         "time_s": 4.799999999999693,
         "geom_ids": [
@@ -428,9 +428,9 @@
         ]
       },
       "robot_vs_ground_excluding_fixed_base": {
-        "distance_m": 0.14099593221470483,
+        "distance_m": 0.1409959322147048,
         "distance_capped_at_m": 0.3,
-        "time_s": 1.450000000000001,
+        "time_s": 2.7999999999999132,
         "geom_ids": [
           0,
           14
@@ -445,9 +445,9 @@
         ]
       },
       "plate_vs_hand_and_link7": {
-        "distance_m": 0.014716676590921005,
+        "distance_m": 0.014716676590921041,
         "distance_capped_at_m": 0.3,
-        "time_s": 7.9499999999993465,
+        "time_s": 12.000000000000677,
         "geom_ids": [
           83,
           65
@@ -462,9 +462,9 @@
         ]
       },
       "tab_vs_hand_and_link7": {
-        "distance_m": 0.014541515669366605,
+        "distance_m": 0.014541515669366595,
         "distance_capped_at_m": 0.3,
-        "time_s": 3.0499999999998857,
+        "time_s": 2.899999999999902,
         "geom_ids": [
           84,
           65
@@ -513,9 +513,9 @@
         ]
       },
       "robot_self_nonadjacent": {
-        "distance_m": 0.022646646272121693,
+        "distance_m": 0.02264339700504374,
         "distance_capped_at_m": 0.3,
-        "time_s": 3.199999999999869,
+        "time_s": 3.3499999999998527,
         "geom_ids": [
           32,
           59
@@ -532,7 +532,7 @@
     },
     "initial_plate_finger_pairs": [
       {
-        "distance_m": 0.0001576136385699028,
+        "distance_m": 0.0001576136385698919,
         "geom_ids": [
           83,
           68
@@ -543,7 +543,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264847,
         "geom_ids": [
           83,
           69
@@ -554,7 +554,7 @@
         ]
       },
       {
-        "distance_m": 0.023983536019528094,
+        "distance_m": 0.018011385288200375,
         "geom_ids": [
           83,
           70
@@ -565,7 +565,7 @@
         ]
       },
       {
-        "distance_m": 0.02720680062043315,
+        "distance_m": 0.022122612865572655,
         "geom_ids": [
           83,
           71
@@ -576,7 +576,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264846,
         "geom_ids": [
           83,
           72
@@ -587,7 +587,7 @@
         ]
       },
       {
-        "distance_m": 0.018314202139323554,
+        "distance_m": 0.014717676447048345,
         "geom_ids": [
           83,
           73
@@ -598,7 +598,7 @@
         ]
       },
       {
-        "distance_m": 0.0001597990542556198,
+        "distance_m": 0.00015979905425563077,
         "geom_ids": [
           83,
           76
@@ -609,7 +609,7 @@
         ]
       },
       {
-        "distance_m": 0.013054118124178418,
+        "distance_m": 0.007184010022264852,
         "geom_ids": [
           83,
           77
@@ -620,7 +620,7 @@
         ]
       },
       {
-        "distance_m": 0.027206800620433156,
+        "distance_m": 0.022122612865572672,
         "geom_ids": [
           83,
           78
@@ -631,7 +631,7 @@
         ]
       },
       {
-        "distance_m": 0.023983536019528094,
+        "distance_m": 0.018011385288200378,
         "geom_ids": [
           83,
           79
@@ -642,7 +642,7 @@
         ]
       },
       {
-        "distance_m": 0.018314202139323565,
+        "distance_m": 0.014717676447048371,
         "geom_ids": [
           83,
           80
@@ -653,7 +653,7 @@
         ]
       },
       {
-        "distance_m": 0.01305411812417842,
+        "distance_m": 0.007184010022264853,
         "geom_ids": [
           83,
           81

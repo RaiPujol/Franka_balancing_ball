@@ -1,8 +1,8 @@
 {
   "platform_scale_m_per_cad_unit": 0.001,
-  "tray_mass_kg": 0.09277,
+  "tray_mass_kg": 0.20936256678704676,
   "bolt_mass_kg": 0.0,
-  "mount_offset_m": [0.0855, 0.0, 0.0805],
+  "mount_offset_m": [0.127, 0.0, 0.0805],
   "mount_quat_wxyz": [0.0, 0.7071067811865476, 0.7071067811865476, 0.0],
   "finger_half_width_m": 0.0175,
   "ball_diameter_m": 0.04267,

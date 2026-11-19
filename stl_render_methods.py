@@ -7,6 +7,7 @@ The simulator ball state is used for scoring and video overlays only.
 import argparse
 import render_methods
 from stl_bridge import use_actual_stl_scene
+from stl_scene import PLATE_SIDE_MM
 
 
 def main():
@@ -16,7 +17,7 @@ def main():
                         default=list(render_methods.LABELS))
     args = parser.parse_args()
     for key, label in list(render_methods.LABELS.items()):
-        render_methods.LABELS[key] = 'STL visual / flat contact | ' + label
+        render_methods.LABELS[key] = f'{PLATE_SIDE_MM:g} mm STL tray / flat contact | ' + label
     with use_actual_stl_scene():
         render_methods.run_methods(args.output_dir, args.methods)
 

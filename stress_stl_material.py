@@ -13,12 +13,14 @@ def trial(item):
     i,task,friction,bolt,delay,seed,offset,out=item
     from stl_bridge import use_actual_stl_scene
     from stl_evaluate import factory_for
+    from stl_scene import DEFAULTS, SOURCE_HASH
     from wrench_shapes import run as shape_run
     from wrench_center_demos import run_one
     scene={'sliding_friction':friction,'bolt_mass_kg':bolt}
     x={'id':i,'task':task,'sliding_friction':friction,'bolt_mass_kg':bolt,
        'delay_s':delay,'seed':seed,'initial_offset_m':list(offset),
        'joint_torque_noise_std_nm':.0005,'joint_velocity_noise_std_rad_s':.0001,
+       'plant_tray_mass_kg':DEFAULTS['tray_mass_kg'], 'platform_stl_sha256':SOURCE_HASH,
        'observer_model':'same bolt mass and nominal platform inertia as plant',
        'collision_surface':'flat proxy; dimple omitted',
        'limitations':'hypothetical unmeasured friction and bolt mass; bolt is surrogate sphere, real inertia and mount unknown'}

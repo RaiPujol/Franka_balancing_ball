@@ -89,7 +89,7 @@ def run_one(offset,task,*,video=None,label='',scene=None,force_std=.005,torque_s
     model,data,meta=build_model(config)
     # The hidden ball placement is deliberately removed from the controller's
     # configuration. Its starting position must come from the wrench estimate.
-    observer_config={k:v for k,v in config.items() if k!='ball_initial_offset_m'}
+    observer_config={k:v for k,v in meta['config'].items() if k!='ball_initial_offset_m'}
     if task=='centering':
         path=SmoothPath(offsets=((0.,0.,0.),(0.,0.,0.)),segment_s=1.,start_delay_s=0.)
         duration=9. if duration_s is None else float(duration_s)

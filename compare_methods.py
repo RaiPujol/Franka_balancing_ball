@@ -60,7 +60,7 @@ def main():
                 record={'task':task,'case':case,'method':args.method,'seed':seed,
                         'initial_offset_m':list(offset),'delay_s':delay,'joint_torque_std_nm':noise,
                         'joint_velocity_std_rad_s':.0001,'wrench_bias_y_nm':bias,
-                        'observer_tray_mass_factor':mass_factor}
+                        'plant_tray_mass_kg':args.tray_mass,'observer_tray_mass_factor':mass_factor}
                 holder=[]
                 def factory(model,data,config=None,**kwargs):
                     cfg=dict(config or {})

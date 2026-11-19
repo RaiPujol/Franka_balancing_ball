@@ -2,6 +2,7 @@
 import argparse,csv,json
 from pathlib import Path
 from stl_bridge import use_actual_stl_scene
+from stl_scene import DEFAULTS, SOURCE_HASH
 from lqr_control import LQGWrenchController
 from wrench_shapes import run as shape_run
 from wrench_center_demos import run_one as center_run
@@ -16,7 +17,7 @@ CASES=(('nominal_20ms',.02,.0001,0.,1.),('noisy_50ms',.05,.0005,0.,1.),
 def factory_for(bias,mass_factor):
     def factory(model,data,config=None,**kw):
         c=dict(config or {})
-        c['tray_mass_kg']=float(c.get('tray_mass_kg',.09277))*mass_factor
+        c['tray_mass_kg']=float(c.get('tray_mass_kg', DEFAULTS['tray_mass_kg']))*mass_factor
         kw.update(torque_bias=(0.,bias,0.),measurement_std=.002,accel_std=.3,max_prediction=.15,
                   lqr_q_position=.36,lqr_q_velocity=.46874617737003077,lqr_r=1.)
         return LQGWrenchController(model,data,config=c,**kw)
@@ -40,6 +41,7 @@ def main():
                     x={'task':task,'case':condition,'noise_seed':seed,'initial_offset_m':list(offset),
                        'delay_s':delay,'joint_torque_std_nm':noise,'joint_velocity_std_rad_s':.0001,
                        'wrist_torque_bias_y_nm':bias,'observer_mass_factor':mass_factor,
+                       'plant_tray_mass_kg':DEFAULTS['tray_mass_kg'], 'platform_stl_sha256':SOURCE_HASH,
                        'collision_surface':'flat proxy: central dimple omitted',
                        'mount':'gripper-alignment hypothesis, rigid attachment'}
                     try:

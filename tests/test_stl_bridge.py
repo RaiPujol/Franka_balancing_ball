@@ -23,7 +23,7 @@ class SceneBridgeTests(unittest.TestCase):
             control=wrench_control.WrenchController(model,data,config=meta['config'],sensor_model='joint_torque')
             self.assertEqual(meta['source_stl_sha256'],control.observer.meta['source_stl_sha256'])
             self.assertEqual(control.observer.meta['config']['ball_initial_offset_m'],[0.,0.])
-            self.assertAlmostEqual(control.observer.meta['config']['tray_mass_kg'],.09277)
+            self.assertAlmostEqual(control.observer.meta['config']['tray_mass_kg'],stl_scene.DEFAULTS['tray_mass_kg'])
 
     def test_rejects_unvalidated_variants(self):
         with self.assertRaises(ValueError):

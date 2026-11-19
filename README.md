@@ -1,47 +1,49 @@
-# Golf ball balancing: STL simulation and measurement tools
+# Franka golf-ball balancing
 
-This folder contains an offline MuJoCo model of the supplied platform on a Franka hand, a force/torque-based estimator and controller for simulation, and separate read-only tools for collecting stationary robot measurements. It does not contain a hardware balancing controller. Do not use the simulated attachment or its simulated clearances to command the real robot.
+This MuJoCo simulation puts a standard golf ball on the revised 233 × 233 mm printed tray. The Franka hand holds the tab with the deck pointing away from the base. A delayed joint-torque estimate supplies the ball feedback for carrying, centering, circle, rounded-square and figure-eight trials.
 
-## Install and test
+The [verification results](RESULTS.md) include failed trials, controller comparisons and the limits of the modeled mount.
 
-Create a Python environment and install the pinned packages in `requirements.txt`. From this folder run:
+## Reproduce a trial
+
+Install the versions in `requirements.txt` in a Python environment. Run the following from the repository root.
 
 ```sh
 python -m pip install -r requirements.txt
 python -m unittest discover -q
 python -m unittest discover -s tests -q
-python stl_evaluate.py --only-task circle --only-case nominal_20ms --only-seed 401 --output-dir /tmp/actual-stl-smoke
+python stl_evaluate.py --only-task circle --only-case nominal_20ms --only-seed 401 --output-dir output/smoke
 ```
 
-The last command runs one offline trial and writes results to the specified output directory. A completed command is not by itself evidence that a trial passed; inspect `results.json` or `results.csv`.
-
-## Run the offline studies and videos
-
-Run the main five-task study, render five LQR videos, or compare all four controller candidates with:
+The trial writes its pass flag, stop reason and tracking error to `output/smoke/results.csv`. The full studies and video entry points are below.
 
 ```sh
-python stl_evaluate.py --output-dir output/stl_study
-python stl_render_selected.py --method lqr --output-dir output/stl_videos
-python stl_render_methods.py --output-dir output/stl_comparison_videos
+python stl_evaluate.py --output-dir output/main
+python stress_stl_material.py --output-dir output/material
+python stress_stl_mass.py --output-dir output/mass
+python stress_stl_reach.py --output-dir output/reach
+python audit_trajectory_distances.py --output-dir output/clearance
 for method in pd kalman_pd lqr mpc; do
-  python stl_compare_methods.py --method "$method" --output-dir output/stl_comparison
+  python stl_compare_methods.py --method "$method" --output-dir output/methods
 done
+python stl_render_selected.py --method lqr --output-dir output/task_videos
+python stl_render_methods.py --output-dir output/comparison_videos
 ```
 
-The comparison writes results in a separate directory for each method. The studies take time; use `--help` on each command to select a single task, condition, or seed when supported. The videos each show one particular simulated scenario; inspect the recorded results for failures and full trial conditions. Their trajectory plots show the reference, the estimated position, and simulator truth for evaluation only. These entry points use the actual STL scene for both plant and unloaded observer. Some retained scripts, including `wrench_shapes.py` and `robot_scene.py`, use the earlier placeholder tray if run directly.
+The `stl_*` entry points load the revised CAD for the plant and empty-tray observer. Running `run_sim.py` or `wrench_shapes.py` directly loads an earlier box model. In the shape videos blue is the requested path, green is the ball estimate and orange is the simulated ball position. The simulator uses the orange trace to score tracking.
 
-## Model and its limits
+## Tray and ball
 
-- `inputs/ball balancing platform.STL` is the user's original STL, in confirmed millimetres. `assets/platform/platform_tray_frame.stl` is a translated copy for simulation. The tray-top frame has its origin at the top surface's centre; the flat top is 150 by 150 mm. The user supplied a 92.77 g printed-part mass. Optional bolt mass is zero by default, and the model's uniform-density inertia has not been measured.
-- The STL is used for rendering and estimating an idealized inertia. The contact model uses a flat box for the tray and a conservative box for the tab: it omits the small central dimple and tab undercuts. It does not simulate bolt fastening or the detailed fit of the fingers, and it is not an exact contact representation of the nonconvex STL.
-- The plate extends **outward, away from the robot base at the default home pose**, with the hand holding the inner mounting tab. Its in-plane orientation is rotated 180 degrees from the earlier inward-facing model while the support surface remains level. Other robot configurations can change the plate's direction in world coordinates.
-- The hand-to-tray transform is provisional. The real part's grip, bolt position and transform have not been measured. The nominal model has approximately 0.16 mm clearance between the tray and the hand at its initial pose; that is not a verified safe physical clearance. Recheck the actual mount, all clearances, payload and arm configuration with the lab before any physical motion.
-- The ball is a dynamic free body. Controller estimates are derived from simulated wrench/joint-torque signals, after transforming the wrench to the tray frame; simulation ground truth is used for evaluation and visualizations, not as feedback. Simulated noise, delay, friction and rigid contacts are assumptions, not measurements of the hardware.
+The current source is `inputs/ball_ballancing_platform.STL`, in millimetres. The earlier 150 mm design remains in `inputs/ball balancing platform.STL`. To regenerate the translated simulation mesh and check it against the supplied Bambu Studio project, run the following with the local path to that project.
 
-The user's standard Franka hand and a nominal golf ball are modeled. Golf ball and tray properties should be measured for the real setup. This simulation alone cannot establish real-robot reliability.
+```sh
+python prepare_platform_mesh.py --verify-3mf /path/to/ball_balancing_platform.3mf
+```
 
-## Read-only robot data
+The new deck is 233 mm square. Its 35 mm wide tab extends 21 mm past the deck. The model places the deck center 127 mm outward from the tab center. The STL supplies the rendered geometry and mass distribution. For contact, the model uses a flat box enclosing the underside ribs and a solid tab. It omits the central dimple, tab hole, mounting bolts and finger compliance. Print mass is provisionally 209.36 g, estimated from the revised CAD volume and the earlier print's measured mass of 92.77 g. The nominal ball is 42.67 mm across and weighs 45.93 g.
 
-See `hardware/README.md` for static data collection, frame conventions and calibration requirements. The ROS1 recorder reads a robot state topic and writes local data; the analysis and shadow scripts are offline. They have not been validated against the currently installed lab robot. They do not start a robot controller or command arm or gripper motion. The robot's estimated external wrench, actual latency, noise and ball-position observability must be independently measured before designing hardware motion tests.
+## Hardware files
 
-See `RESULTS.md` and `results/` for the tested cases and limitations, and `THIRD_PARTY.md` for asset attribution.
+The `hardware/` directory contains stationary recording and offline analysis tools. The separate `torque_balance/` package has a Franka deployment script and its own simulation with a different mount and a 254 mm box. Its default simulation pose puts the revised CAD almost vertical. The results here apply to the outward-facing CAD model. We have not tested the revised print on hardware.
+
+See [asset provenance](THIRD_PARTY.md) for the original models and dependencies.

@@ -1,0 +1,11 @@
+course_folder_relative_path,set,task,controller,seed,delay_ms,joint_torque_noise_std_nm,frames,fps,performance_pass,tracking_rms_mm,final_second_max_offset_mm,stop_reason,file_sha256
+Updated Plate Videos/circle.mp4,task,circle,lqr,401,50,0.0005,648,24,True,2.8985832907127977,,,5242fb3ccf2de0e064d79c3e710f42aceffc04b2a59b2f757a47e7b39829ff40
+Updated Plate Videos/rounded_square.mp4,task,rounded_square,lqr,401,50,0.0005,530,24,False,2.68336068324792,,wrench feedback unavailable: insufficient_normal_force,bf9f1d7ef079338d6eadbed1e4fb0c576c55738f8b3c6f40c51ed861f0661e03
+Updated Plate Videos/figure_eight.mp4,task,figure_eight,lqr,401,50,0.0005,648,24,True,2.7107943417653626,,,d80e5011a9db4ea7041098ae37bbaaf32827fb1308c72d10c38335deb30cf57f
+Updated Plate Videos/centering.mp4,task,centering,lqr,401,50,0.0005,216,24,True,,1.021294711920888,,7722a014eafe51fca029f1057a96b8fcd9586faddb36c75dafbb99124ab1d04f
+Updated Plate Videos/carrying.mp4,task,carrying,lqr,401,50,0.0005,336,24,True,,1.4536890328118979,,0d2b6bfdc59aefe975b1d88e66e09c8e2cc5a62372a0702aa6ad96c1820c77dc
+Updated Plate Controller Comparison Videos/pd_circle.mp4,comparison,circle,pd,401,50,0.0005,648,24,False,9.088666974428351,,,d51f45ab823304ae1c7da8668ce760d94b982ff54f5c28944ef27b2e01170d5d
+Updated Plate Controller Comparison Videos/kalman_pd_circle.mp4,comparison,circle,kalman_pd,401,50,0.0005,648,24,True,1.7579181004666777,,,b110f04ebfcaf7538aadfe9b7737d10e9ec6026a12ba28825e6d2412a374686d
+Updated Plate Controller Comparison Videos/lqr_circle.mp4,comparison,circle,lqr,401,50,0.0005,648,24,True,2.8985832907127977,,,dd8c1d49266d89b680b192ec0f65f42c95bd7a659760d5557edd0ed3b2ef8277
+Updated Plate Controller Comparison Videos/mpc_circle.mp4,comparison,circle,mpc,401,50,0.0005,648,24,True,3.410915713063904,,,6367663fce3b1ca7f01c5dea7c84059fa86aebbc77787b4aa969f972fbb1ff1b
+Updated Plate Videos/Nominal reference/rounded_square_20ms_nominal_seed401.mp4,nominal reference,rounded_square,lqr,401,20,0.0001,1032,24,True,2.1245462631191145,,,b5610fef3b8f31d350508a75e56a6447122e36f09b2524758fdd2babf84fb2c4

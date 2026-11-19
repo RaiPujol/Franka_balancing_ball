@@ -40,7 +40,8 @@ def run(shape, *, config=None, radius_m=.02, period_s=8., video=None,
     mujoco.mj_forward(model,data)
     target=ShapePath(shape=shape,radius_m=radius_m,period_s=period_s)
     factory=WrenchController if controller_factory is None else controller_factory
-    control=factory(model,data,config=meta['config'],path=SmoothPath(segment_s=5.),target_path=target,
+    observer_config={k:v for k,v in meta['config'].items() if k!='ball_initial_offset_m'}
+    control=factory(model,data,config=observer_config,path=SmoothPath(segment_s=5.),target_path=target,
         force_std=force_std,torque_std=torque_std,delay_s=delay_s,seed=seed,
         position_tau=position_tau,velocity_tau=velocity_tau,accel_tau=accel_tau,
         feedback_kp=feedback_kp,feedback_kd=feedback_kd,joint_velocity_std=joint_velocity_std,
@@ -132,12 +133,12 @@ def run(shape, *, config=None, radius_m=.02, period_s=8., video=None,
             for _ in range(48):writer.append_data(np.asarray(paused))
         if writer:writer.close()
         if renderer:renderer.close()
-    arr=np.asarray(rows,dtype=float)
-    if not len(arr): raise RuntimeError('No valid estimator samples: '+str(reason))
+    # A rejected first observation is a completed experiment with no samples.
+    arr=np.asarray(rows,dtype=float).reshape(-1,11)
     mask=(arr[:,0]>=target.plateau_start)&(arr[:,0]<target.plateau_end)
     errors=arr[mask,7]
     summary={'scenario':shape,'classification':'simulation only; noisy delayed joint torque proxy or ideal flange wrench; truth evaluator only',
-       'scene':meta['config'],'path':target.__dict__,'duration_requested_s':duration,'duration_completed_s':float(arr[-1,0]),
+       'scene':meta['config'],'path':target.__dict__,'duration_requested_s':duration,'duration_completed_s':float(arr[-1,0]) if len(arr) else 0.,
        'controller_reached_end':reason is None and len(arr)==round(duration/dt),'stop_reason':reason,
        'sensor_model':sensor_model,'force_noise_std_n_assumed':force_std if sensor_model=='cut_wrench' else None,
        'torque_noise_std_nm_assumed':torque_std if sensor_model=='cut_wrench' else None,
@@ -146,9 +147,9 @@ def run(shape, *, config=None, radius_m=.02, period_s=8., video=None,
        'feedback_kp':feedback_kp,'feedback_kd':feedback_kd,'joint_velocity_noise_std_rad_s_assumed':joint_velocity_std,'noise_seed':seed,
        'plateau_tracking_rms_m':float(np.sqrt(np.mean(errors**2))) if len(errors) else None,
        'plateau_tracking_max_m':float(np.max(errors)) if len(errors) else None,
-       'estimation_error_rms_m':float(np.sqrt(np.mean(arr[:,8]**2))),
-       'minimum_full_footprint_margin_m':float(np.min(arr[:,9])),
-       'max_tray_position_error_m':max_tray_error,
+       'estimation_error_rms_m':float(np.sqrt(np.mean(arr[:,8]**2))) if len(arr) else None,
+       'minimum_full_footprint_margin_m':float(np.min(arr[:,9])) if len(arr) else None,
+       'max_tray_position_error_m':max_tray_error if len(arr) else None,
        'no_contact_samples_after_half_s':no_contact,'unexpected_geom_contacts':[list(x) for x in sorted(contacts)],
        'warnings':{str(i):int(w.number) for i,w in enumerate(data.warning) if w.number},
        'limitations':'Joint-torque residual proxy generated from ideal simulated wrench; NOT the actual Franka torque estimator. Exact tool model, noise and delay assumptions are uncalibrated; no shelves or physical grasp strength.'}

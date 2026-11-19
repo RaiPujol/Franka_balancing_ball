@@ -3,6 +3,7 @@
 Uses MuJoCo geometry distances, including pairs excluded from contacts. This
 is a sampled diagnostic, not continuous collision checking or hardware proof.
 """
+import argparse
 import json
 from pathlib import Path
 import numpy as np
@@ -12,7 +13,6 @@ from render_methods import controller_factory
 from wrench_shapes import run as shape_run
 from wrench_center_demos import run_one as center_run
 
-OUT=Path('output/stl_distance_audit');OUT.mkdir(parents=True,exist_ok=True)
 
 class Audit:
     def __init__(self):self.model=None;self.calls=0;self.mins={};self.start={}
@@ -67,7 +67,7 @@ class Audit:
                 if self.calls==1:self.start[category].append({'distance_m':dist,'geom_ids':[a,b],'bodies':[self.body(m,a),self.body(m,b)]})
 
 
-def run(task):
+def run(task, output_dir):
     audit=Audit();original=mujoco.mj_step
     def instrument(m,d,*args,**kw):
         result=original(m,d,*args,**kw)
@@ -79,7 +79,7 @@ def run(task):
             factory=controller_factory('lqr')
             if task=='circle':
                 result=shape_run('circle',config={'ball_initial_offset_m':[.018,-.012]},period_s=8.,
-                    output_dir=OUT/'circle',sensor_model='joint_torque',joint_torque_std=.0005,
+                    output_dir=output_dir/'circle',sensor_model='joint_torque',joint_torque_std=.0005,
                     joint_velocity_std=.0001,delay_s=.05,seed=401,controller_factory=factory)
                 completed=result['controller_reached_end'];reason=result['stop_reason']
             else:
@@ -97,9 +97,13 @@ def run(task):
                      'Adjacent robot bodies are excluded from self-distance category as normally attached.']}
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output-dir', type=Path, default=Path('output/stl_distance_audit'))
+    output_dir = parser.parse_args().output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
     results=[]
     for task in ('circle','carrying'):
-        print('Auditing',task,flush=True);r=run(task);results.append(r)
+        print('Auditing',task,flush=True);r=run(task, output_dir);results.append(r)
         print('completed:',r['completed'],'stop:',r['stop_reason'],flush=True)
         for cat,x in r['minimum_distances'].items():print(cat,round(x['distance_m']*1000,4),'mm',x['bodies'],round(x['time_s'],3),'s',flush=True)
-        (OUT/'distance_audit.json').write_text(json.dumps(results,indent=2)+'\n')
+        (output_dir/'distance_audit.json').write_text(json.dumps(results,indent=2)+'\n')

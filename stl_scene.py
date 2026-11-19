@@ -1,12 +1,10 @@
 """Actual supplied platform STL, offline MuJoCo, not a hardware scene.
 
-The STL has no unit metadata; the user confirmed one CAD unit is one millimetre.
-The visual geometry uses the original vertices translated into a tray-top frame;
-collision uses a flat top box and a conservative solid box for its mounting tab.
-The small central dimple and other non-convex features are NOT in the flat proxy.
-It assumes a rigid idealized hand attachment, not a simulated gripper grasp.
-The user reported a 92.77 g printed part, but bolt mass, true inertial
-distribution, gripping pose, tool transform and friction are unknown.
+The 3MF source declares millimetres. The STL is translated to the top center
+of the 233 mm square. The support proxy fills the 7 mm underside rib envelope
+and omits the small central dimple; the tab proxy fills its hole and undercuts.
+The attachment is a fixed hand transform. The revised printed mass, bolt mass,
+grip pose, true inertia and friction remain unmeasured.
 No hardware commands are present.
 """
 from __future__ import annotations
@@ -19,16 +17,22 @@ import numpy as np
 import mujoco
 
 ROOT=Path(__file__).resolve().parent
-SOURCE=ROOT/'inputs/ball balancing platform.STL'
+SOURCE=ROOT/'inputs/ball_ballancing_platform.STL'
 LOCAL_MESH=ROOT/'assets/platform/platform_tray_frame.stl'
 ROBOT_XML=ROOT/'assets/panda/panda_torque_table.xml'
-SOURCE_HASH='46457efb2cf70c7f53ea1583df379452e7abe162c1d135bf351783048456c655'
-LOCAL_HASH='a70e1d16046b0db5dc50bbefaa8841320a89477e4ebbc82f63d4c8c3009624ff'
+SOURCE_HASH='4ad83a720ca104012ddd7d72344ab5eeb945cdb7c17af46722c5147f1c75caa4'
+LOCAL_HASH='4db94a665e78f2249d5a1b693369e9d0373fd85d791587ac7cee1901b6800b79'
+PLATE_SIDE_MM = 233.0
+TAB_DEPTH_MM = 21.0
+TAB_CENTER_OFFSET_MM = (PLATE_SIDE_MM + TAB_DEPTH_MM) / 2
+# Preserve the old print's effective density as a provisional estimate only.
+# Enclosed volumes come from oriented triangles in the original and updated STL.
+NOMINAL_PRINT_MASS_KG = .09277 * (256824.1218112003 / 113800.54298177977)
 DEFAULTS={
  'platform_scale_m_per_cad_unit':.001,
- 'tray_mass_kg':.09277,  # user-measured mass of the complete printed STL
+ 'tray_mass_kg':NOMINAL_PRINT_MASS_KG,
  'bolt_mass_kg':0.,  # unmeasured bolt(s), optionally set once weighed
- 'mount_offset_m':[.0855,0.,.0805], # illustrative top-center pose in hand frame
+ 'mount_offset_m':[TAB_CENTER_OFFSET_MM/1000,0.,.0805], # illustrative top-center pose in hand frame
  # Orient the 35 mm tab width across the 35 mm jaw opening and point the
  # platform along hand +x, away from the robot base at the default home pose.
  # The attachment pose has NOT been verified against the physical bolted mount.
@@ -70,7 +74,7 @@ def build_model(config=None):
     unknown=set(supplied)-set(DEFAULTS)-derived
     if unknown:raise ValueError('Unknown STL scene parameters: '+str(sorted(unknown)))
     cfg=deepcopy(DEFAULTS);cfg.update({k:v for k,v in supplied.items() if k not in derived})
-    scale=_positive(cfg,'platform_scale_m_per_cad_unit');side=150*scale
+    scale=_positive(cfg,'platform_scale_m_per_cad_unit');side=PLATE_SIDE_MM*scale
     for k,expected in (('tray_length_m',side),('tray_width_m',side)):
         if k in supplied and not np.isclose(float(supplied[k]),expected,atol=1e-10):raise ValueError(k+' must match STL dimensions; change STL scale explicitly')
     if not SOURCE.is_file() or hashlib.sha256(SOURCE.read_bytes()).hexdigest()!=SOURCE_HASH:
@@ -96,26 +100,26 @@ def build_model(config=None):
     hand=root.find(".//body[@name='hand']");world=root.find('worldbody')
     tray=ET.SubElement(hand,'body',name='tray',pos=_fmt(mount),quat=_fmt(quat))
     # Use exact nonconvex mesh volume under *uniform density* for inertia at
-    # the measured mass; real infill and material distribution are unknown.
+    # the configured mass; print infill and material distribution are unknown.
     ET.SubElement(tray,'geom',name='platform_visual',type='mesh',mesh='actual_platform_visual',
         mass=str(mass),contype='0',conaffinity='0',rgba='.12 .45 .7 1')
     # Flat top approximation exactly matches the measured outer square and
     # z=21 top away from its tiny 2 mm diameter, 1 mm deep central dimple.
     ET.SubElement(tray,'geom',name='tray_plate',type='box',
-        size=_fmt([side/2,side/2,.5*scale]),pos=_fmt([0,0,-.5*scale]),
+        size=_fmt([side/2,side/2,3.5*scale]),pos=_fmt([0,0,-3.5*scale]),
         mass='0',rgba='0 0 0 0',friction=_fmt(friction),condim='6')
     ET.SubElement(tray,'site',name='tray_top',pos='0 0 0',size='.003',rgba='0 1 0 1')
     # Actual extension is concave. This explicit box is a solid approximation,
     # not the detailed hole geometry; it cannot prove physical mount fit.
     tab=ET.SubElement(tray,'body',name='platform_tab')
     ET.SubElement(tab,'geom',name='tab_collision_proxy',type='box',
-        pos=_fmt([0,-85.5*scale,-10.5*scale]),size=_fmt([17.5*scale,10.5*scale,10.5*scale]),
+        pos=_fmt([0,-TAB_CENTER_OFFSET_MM*scale,-10.5*scale]),size=_fmt([17.5*scale,10.5*scale,10.5*scale]),
         mass='0',rgba='0 0 0 0')
     if bolt_mass:
         # Point-mass surrogate at the tab center. Real bolt locations and
         # inertia are unknown; this must not be interpreted as a bolt CAD model.
         ET.SubElement(tab,'geom',name='bolt_mass_surrogate',type='sphere',
-            pos=_fmt([0,-85.5*scale,-10.5*scale]),size='.001',mass=str(bolt_mass),
+            pos=_fmt([0,-TAB_CENTER_OFFSET_MM*scale,-10.5*scale]),size='.001',mass=str(bolt_mass),
             contype='0',conaffinity='0',rgba='0 0 0 0')
     contact=root.find('contact')
     if contact is None:contact=ET.SubElement(root,'contact')
@@ -152,10 +156,11 @@ def build_model(config=None):
           'wrist_ft_site_id':model.site('wrist_ft').id,'force_sensor_address':int(model.sensor_adr[model.sensor('tray_cut_force').id]),
           'torque_sensor_address':int(model.sensor_adr[model.sensor('tray_cut_torque').id]),
           'source_stl_sha256':SOURCE_HASH,'stl_m_per_unit':scale,
-          'collision_surface':'flat 150-unit square; central dimple omitted',
+          'collision_surface':'flat 233-unit square; conservative 7-unit rib envelope; central dimple omitted',
           'collision_tab':'conservative solid box; tab undercut not modeled',
           'tab_finger_collision_excluded':True,'attachment_rigid_idealized':True,
-          'user_measured_printed_part_mass_kg':.09277,'bolt_mass_unmeasured':True,
+          'nominal_print_mass_source':'old print mass scaled by enclosed STL volume',
+          'updated_print_mass_unmeasured':True,'bolt_mass_unmeasured':True,
           'inertia_model':'exact closed STL under uniform density; actual print infill unknown',
           'physical_mount_and_friction_unverified':True}
     return model,data,meta

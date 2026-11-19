@@ -5,13 +5,14 @@ import numpy as np
 import mujoco
 from scipy.spatial import cKDTree
 import stl_scene
+from prepare_platform_mesh import prepare_asset
 
 
 class ActualPlatformSceneTests(unittest.TestCase):
-    def test_measured_mass_dimensions_and_free_ball(self):
+    def test_provisional_mass_dimensions_and_free_ball(self):
         m,d,meta=stl_scene.build_model()
-        self.assertAlmostEqual(m.body_mass[meta['tray_body_id']],.09277,places=10)
-        np.testing.assert_allclose(m.geom_size[meta['tray_geom_id']],[.075,.075,.0005])
+        self.assertAlmostEqual(m.body_mass[meta['tray_body_id']],.20936256678704676,places=10)
+        np.testing.assert_allclose(m.geom_size[meta['tray_geom_id']],[.1165,.1165,.0035])
         self.assertEqual(int(m.jnt_type[m.joint('ball_joint').id]),int(mujoco.mjtJoint.mjJNT_FREE))
         R=d.site_xmat[meta['tray_site_id']].reshape(3,3)
         self.assertGreater(R[2,2],.99999)
@@ -37,6 +38,24 @@ class ActualPlatformSceneTests(unittest.TestCase):
         local=np.unique(rec['v'].reshape(-1,3),axis=0)*meta['config']['platform_scale_m_per_cad_unit']
         body_world=local@d.xmat[meta['tray_body_id']].reshape(3,3).T+d.xpos[meta['tray_body_id']]
         self.assertLess(float(cKDTree(mesh_world).query(body_world)[0].max()),3e-8)
+
+    def test_render_mesh_comes_from_supplied_revision(self):
+        source, expected_asset = prepare_asset()
+        np.testing.assert_allclose(np.ptp(source.reshape(-1, 3), axis=0), [233, 254, 21], atol=1e-4)
+        self.assertEqual(stl_scene.LOCAL_MESH.read_bytes(), expected_asset)
+
+    def test_new_plate_extends_41_5_mm_further_with_tab_center_still_at_pinch(self):
+        m,d,meta=stl_scene.build_model()
+        hand=m.body('hand').id
+        world_to_hand=d.xmat[hand].reshape(3,3).T
+        def in_hand(point):
+            return world_to_hand @ (point-d.xpos[hand])
+        np.testing.assert_allclose(in_hand(d.site_xpos[meta['tray_site_id']]), [.127,0,.0805], atol=1e-9)
+        np.testing.assert_allclose(in_hand(d.geom_xpos[m.geom('tab_collision_proxy').id]), [0,0,.091], atol=1e-9)
+        # Nominal ball placement can now use locations outside the old 150 mm square.
+        stl_scene.build_model({'ball_initial_offset_m':[.08,0]})
+        with self.assertRaises(ValueError):
+            stl_scene.build_model({'ball_initial_offset_m':[.10,0]})
 
     def test_tab_proxies_reach_both_modeled_fingers(self):
         m,d,_=stl_scene.build_model();tab=m.geom('tab_collision_proxy').id
