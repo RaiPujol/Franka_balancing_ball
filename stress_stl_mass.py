@@ -3,6 +3,7 @@ import argparse
 import csv
 from concurrent.futures import ProcessPoolExecutor
 from itertools import product
+from math import isfinite
 from pathlib import Path
 
 from stl_bridge import use_actual_stl_scene
@@ -13,10 +14,8 @@ from wrench_shapes import run
 
 
 def trial(job):
-    task, seed, offset, plant_scale, calibration, output = job
-    nominal = DEFAULTS['tray_mass_kg']
-    plant_mass = nominal * plant_scale
-    observer_mass = plant_mass if calibration == 'matched' else nominal
+    task, seed, offset, plant_scale, observer_mass, calibration, output = job
+    plant_mass = DEFAULTS['tray_mass_kg'] * plant_scale
     scene = {'tray_mass_kg': plant_mass}
     settings = dict(sensor_model='joint_torque', joint_torque_std=.0005,
                     joint_velocity_std=.0001, delay_s=.05, seed=seed,
@@ -43,13 +42,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path, default=Path('output/mass_study'))
     parser.add_argument('--workers', type=int, default=2)
+    parser.add_argument('--previous-observer-g', type=float,
+                        help='also test the measured plate with this previous observer mass in grams')
     args = parser.parse_args()
+    if args.previous_observer_g is not None and (
+            not isfinite(args.previous_observer_g) or args.previous_observer_g <= 0):
+        parser.error('--previous-observer-g must be finite and positive')
     args.output_dir.mkdir(parents=True, exist_ok=True)
     seeds = [(1103, (.018, -.012)), (1201, (-.016, .018))]
-    jobs = [(task, seed, offset, scale, calibration, args.output_dir)
-            for task, (seed, offset), scale, calibration in product(
-                ['circle','carrying'], seeds, [.75, 1., 1.25], ['matched','fixed_nominal'])
-            if scale != 1. or calibration == 'matched']
+    nominal = DEFAULTS['tray_mass_kg']
+    jobs = []
+    for task, (seed, offset) in product(('circle', 'carrying'), seeds):
+        for scale in (.75, 1., 1.25):
+            jobs.append((task, seed, offset, scale, nominal * scale, 'matched', args.output_dir))
+            if scale != 1.:
+                jobs.append((task, seed, offset, scale, nominal, 'fixed_nominal', args.output_dir))
+        if args.previous_observer_g is not None:
+            jobs.append((task, seed, offset, 1., args.previous_observer_g / 1000,
+                         'previous_estimate', args.output_dir))
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         results = list(pool.map(trial, jobs))
     with (args.output_dir/'results.csv').open('w', newline='') as f:

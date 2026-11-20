@@ -1,11 +1,11 @@
-course_folder_relative_path,set,task,controller,seed,delay_ms,joint_torque_noise_std_nm,frames,fps,performance_pass,tracking_rms_mm,final_second_max_offset_mm,stop_reason,file_sha256
-Updated Plate Videos/circle.mp4,task,circle,lqr,401,50,0.0005,648,24,True,2.8985832907127977,,,5242fb3ccf2de0e064d79c3e710f42aceffc04b2a59b2f757a47e7b39829ff40
-Updated Plate Videos/rounded_square.mp4,task,rounded_square,lqr,401,50,0.0005,530,24,False,2.68336068324792,,wrench feedback unavailable: insufficient_normal_force,bf9f1d7ef079338d6eadbed1e4fb0c576c55738f8b3c6f40c51ed861f0661e03
-Updated Plate Videos/figure_eight.mp4,task,figure_eight,lqr,401,50,0.0005,648,24,True,2.7107943417653626,,,d80e5011a9db4ea7041098ae37bbaaf32827fb1308c72d10c38335deb30cf57f
-Updated Plate Videos/centering.mp4,task,centering,lqr,401,50,0.0005,216,24,True,,1.021294711920888,,7722a014eafe51fca029f1057a96b8fcd9586faddb36c75dafbb99124ab1d04f
-Updated Plate Videos/carrying.mp4,task,carrying,lqr,401,50,0.0005,336,24,True,,1.4536890328118979,,0d2b6bfdc59aefe975b1d88e66e09c8e2cc5a62372a0702aa6ad96c1820c77dc
-Updated Plate Controller Comparison Videos/pd_circle.mp4,comparison,circle,pd,401,50,0.0005,648,24,False,9.088666974428351,,,d51f45ab823304ae1c7da8668ce760d94b982ff54f5c28944ef27b2e01170d5d
-Updated Plate Controller Comparison Videos/kalman_pd_circle.mp4,comparison,circle,kalman_pd,401,50,0.0005,648,24,True,1.7579181004666777,,,b110f04ebfcaf7538aadfe9b7737d10e9ec6026a12ba28825e6d2412a374686d
-Updated Plate Controller Comparison Videos/lqr_circle.mp4,comparison,circle,lqr,401,50,0.0005,648,24,True,2.8985832907127977,,,dd8c1d49266d89b680b192ec0f65f42c95bd7a659760d5557edd0ed3b2ef8277
-Updated Plate Controller Comparison Videos/mpc_circle.mp4,comparison,circle,mpc,401,50,0.0005,648,24,True,3.410915713063904,,,6367663fce3b1ca7f01c5dea7c84059fa86aebbc77787b4aa969f972fbb1ff1b
-Updated Plate Videos/Nominal reference/rounded_square_20ms_nominal_seed401.mp4,nominal reference,rounded_square,lqr,401,20,0.0001,1032,24,True,2.1245462631191145,,,b5610fef3b8f31d350508a75e56a6447122e36f09b2524758fdd2babf84fb2c4
+course_folder_relative_path,set,task,controller,plate_mass_g,seed,delay_ms,joint_torque_noise_std_nm,frames,fps,video_duration_s,requested_simulation_s,observed_simulation_s,performance_pass,tracking_rms_mm,final_second_max_offset_mm,stop_reason,file_sha256
+Measured Plate Videos/circle.mp4,task,circle,lqr,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,True,2.8043717094100775,,,f6f3848f18da51302428835dcc4b3e701ae65f6e8ea9d739ef5391bd66387aef
+Measured Plate Videos/rounded_square.mp4,task,rounded_square,lqr,162.5,401,50,0.0005,1032,24,43.0,43.0,42.998,True,2.5577282537173573,,,97e0ce9be40d70647aecfed22a7a600efa14cb2c17f9ecbc2dbc0add3d23fa59
+Measured Plate Videos/figure_eight.mp4,task,figure_eight,lqr,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,True,2.6670336957735814,,,3b670a03ddffa92f70426250df2edc5679ea75240ed06683e659f02fd9d56b37
+Measured Plate Videos/centering.mp4,task,centering,lqr,162.5,401,50,0.0005,216,24,9.0,9.0,9.0,True,,1.0176172118809574,,7d6ede5e4360d63577d30d67143530b644d7a2455cf59721e0237c0d1b2dee5a
+Measured Plate Videos/carrying.mp4,task,carrying,lqr,162.5,401,50,0.0005,336,24,14.0,14.0,14.0,True,,1.4597193592094553,,9075ab1d22af11ba54de2fe6affba93f9a566d64dc2653cf69e36fa63641f81f
+Measured Plate Controller Comparison Videos/pd_circle.mp4,comparison,circle,pd,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,False,8.841779090377626,,,e6e5de9ad947a38e33ca3d9c21c831085efbb15c503add5a64dd6d166b5579e3
+Measured Plate Controller Comparison Videos/kalman_pd_circle.mp4,comparison,circle,kalman_pd,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,True,1.712524580840754,,,7848efdfc7ace21b4202bcc22b798d8614a854f24718989daa8238fc9b788874
+Measured Plate Controller Comparison Videos/lqr_circle.mp4,comparison,circle,lqr,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,True,2.8043717094100775,,,d21f19eabf9f19cbd681a77ebf5881e5b12353d77f24c432986cf5d1f768954a
+Measured Plate Controller Comparison Videos/mpc_circle.mp4,comparison,circle,mpc,162.5,401,50,0.0005,648,24,27.0,27.0,26.998,True,3.3518327349549124,,,0b7661f6df54474df7675477922572f379df784bfa3be2430d21e3726384a4f1
+Measured Plate Videos/Nominal reference/rounded_square_20ms_nominal_seed401.mp4,nominal reference,rounded_square,lqr,162.5,401,20,0.0001,1032,24,43.0,43.0,42.998,True,2.1157072347849537,,,db88df7adcb854f34abc0e47757f23d6f38a14677c745fb890acea6d0c70c3ba

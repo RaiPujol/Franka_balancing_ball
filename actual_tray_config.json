@@ -1,6 +1,6 @@
 {
   "platform_scale_m_per_cad_unit": 0.001,
-  "tray_mass_kg": 0.20936256678704676,
+  "tray_mass_kg": 0.1625,
   "bolt_mass_kg": 0.0,
   "mount_offset_m": [0.127, 0.0, 0.0805],
   "mount_quat_wxyz": [0.0, 0.7071067811865476, 0.7071067811865476, 0.0],

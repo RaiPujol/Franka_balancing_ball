@@ -20,7 +20,7 @@ The trial writes its pass flag, stop reason and tracking error to `output/smoke/
 ```sh
 python stl_evaluate.py --output-dir output/main
 python stress_stl_material.py --output-dir output/material
-python stress_stl_mass.py --output-dir output/mass
+python stress_stl_mass.py --previous-observer-g 209.36256678704676 --output-dir output/mass
 python stress_stl_reach.py --output-dir output/reach
 python audit_trajectory_distances.py --output-dir output/clearance
 for method in pd kalman_pd lqr mpc; do
@@ -40,7 +40,7 @@ The current source is `inputs/ball_ballancing_platform.STL`, in millimetres. The
 python prepare_platform_mesh.py --verify-3mf /path/to/ball_balancing_platform.3mf
 ```
 
-The new deck is 233 mm square. Its 35 mm wide tab extends 21 mm past the deck. The model places the deck center 127 mm outward from the tab center. The STL supplies the rendered geometry and mass distribution. For contact, the model uses a flat box enclosing the underside ribs and a solid tab. It omits the central dimple, tab hole, mounting bolts and finger compliance. Print mass is provisionally 209.36 g, estimated from the revised CAD volume and the earlier print's measured mass of 92.77 g. The nominal ball is 42.67 mm across and weighs 45.93 g.
+The new deck is 233 mm square. Its 35 mm wide tab extends 21 mm past the deck. The model places the deck center 127 mm outward from the tab center. The STL supplies the rendered geometry and mass distribution. For contact, the model uses a flat box enclosing the underside ribs and a solid tab. It omits the central dimple, tab hole, mounting bolts and finger compliance. The team weighed the revised print at 162.5 g. The nominal model uses that mass for the plate and zero added bolt mass. The material sweep also tests 10 g of fasteners. The nominal ball is 42.67 mm across and weighs 45.93 g.
 
 ## Hardware files
 

@@ -1,11 +1,11 @@
 {
-  "stl_scene.py": "c9891149de7b7a75935f44cfc0236934527628221913015f475593a1a14b68a6",
+  "stl_scene.py": "3af466be2c7e49af9b821d26e999384c224ff188a8b76bf8893445787eaf7e93",
   "stl_bridge.py": "0ba54aac681e00b74ac1e5a457dfe4af5834c2dc581521797f83b148341fc71c",
   "stl_compare_methods.py": "9bca28873fc4d3f82c58f7b570ea95fb6c105b95a4105c5c3c520ae888832613",
   "compare_methods.py": "1a662e43d75f7e3908df3b0a42c5093d55464523e758b8fdfdcdf43bc688a46f",
   "assets/platform/platform_tray_frame.stl": "4db94a665e78f2249d5a1b693369e9d0373fd85d791587ac7cee1901b6800b79",
   "inputs/ball_ballancing_platform.STL": "4ad83a720ca104012ddd7d72344ab5eeb945cdb7c17af46722c5147f1c75caa4",
-  "actual_tray_config.json": "e3d59dc4f7a4832345ec9f23d7478a06ced46be888049240fcfa52b231662402",
+  "actual_tray_config.json": "16f1ffc5422d0a95c13cceef7a84ea71286ab7e4a8a2abea2188ae19fa623359",
   "controller.py": "30afc27a17414f42832bea6fceba909f34c77c74322d56b335a2e86f2c6057e4",
   "wrench_control.py": "6839d892d08b08a155ed0343e05d6e0861edb3c62d4f2f4d430dd6e9ded548a6",
   "wrench_shapes.py": "0ef9a77c009474ad6ee6f37c6d70077ab7e36da89f39229da9502ce1646a6bf3",

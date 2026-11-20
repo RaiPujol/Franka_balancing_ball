@@ -1,7 +1,7 @@
 {
   "purpose": "Offline evaluation of simulated wrench readings at the samples delivered to the unmodified controller. All forces are normal to the tray, in newtons.",
   "scene_stl_sha256": "4ad83a720ca104012ddd7d72344ab5eeb945cdb7c17af46722c5147f1c75caa4",
-  "plant_mass_kg": 0.2093625667870468,
+  "plant_mass_kg": 0.1625,
   "condition": "Kalman + LQR circle, seed 401, 0.1 ms joint-acceleration filter time constant, 0.2 N normal-force gate.",
   "fields": {
     "measurement_time_s": "Simulated raw sample timestamp including startup hold. The shape starts at t=0.550 s.",
@@ -16,30 +16,30 @@
     {
       "case": "nominal_20ms",
       "sample_selection": "final delivered sample of completed trajectory",
-      "observer_to_plant_mass_ratio": 1,
+      "observer_to_plant_mass_ratio": 1.0,
       "delay_s": 0.02,
       "joint_torque_noise_std_nm": 0.0001,
       "measurement_time_s": 27.528,
       "delivery_time_s": 27.548,
-      "feedback_fz_n": 0.5348210718036089,
-      "contact_fz_n": 0.5049260283160698,
-      "exact_acceleration_shadow_fz_n": 0.5049301125616636,
-      "feedback_contact_rms_error_n": 0.04601167819312599,
-      "shadow_contact_rms_error_n": 3.655257100405917e-06
+      "feedback_fz_n": 0.5340301917567524,
+      "contact_fz_n": 0.5055520778772534,
+      "exact_acceleration_shadow_fz_n": 0.5055556863693225,
+      "feedback_contact_rms_error_n": 0.0432565159364886,
+      "shadow_contact_rms_error_n": 3.4025421428676224e-06
     },
     {
       "case": "noisy_80ms",
       "sample_selection": "first delivered invalid sample during trajectory",
-      "observer_to_plant_mass_ratio": 1,
+      "observer_to_plant_mass_ratio": 1.0,
       "delay_s": 0.08,
       "joint_torque_noise_std_nm": 0.001,
       "measurement_time_s": 13.232,
       "delivery_time_s": 13.312,
-      "feedback_fz_n": 0.15160693887522192,
-      "contact_fz_n": 0.2661378550845259,
-      "exact_acceleration_shadow_fz_n": 0.26613714936645544,
-      "feedback_contact_rms_error_n": 0.046386835433835184,
-      "shadow_contact_rms_error_n": 6.893489050476721e-06
+      "feedback_fz_n": 0.15714344778862005,
+      "contact_fz_n": 0.2652704227190905,
+      "exact_acceleration_shadow_fz_n": 0.2652698741813828,
+      "feedback_contact_rms_error_n": 0.043635110487925434,
+      "shadow_contact_rms_error_n": 6.458971378653696e-06
     },
     {
       "case": "mass_mismatch_50ms",
@@ -47,13 +47,14 @@
       "observer_to_plant_mass_ratio": 1.1,
       "delay_s": 0.05,
       "joint_torque_noise_std_nm": 0.0001,
-      "measurement_time_s": 0.508,
-      "delivery_time_s": 0.558,
-      "feedback_fz_n": 0.1698440431823685,
-      "contact_fz_n": 0.45048650329221235,
-      "exact_acceleration_shadow_fz_n": 0.24514182788546482,
-      "feedback_contact_rms_error_n": 0.2036769805126707,
-      "shadow_contact_rms_error_n": 0.2010338760932062
+      "measurement_time_s": 0.59,
+      "delivery_time_s": 0.64,
+      "feedback_fz_n": 0.19392072263352014,
+      "contact_fz_n": 0.3702927255227871,
+      "exact_acceleration_shadow_fz_n": 0.23866540937273018,
+      "feedback_contact_rms_error_n": 0.16564968367782576,
+      "shadow_contact_rms_error_n": 0.1586584633536912
     }
-  ]
+  ],
+  "instrumentation_check": "For all three cases, the trajectory CSV was byte-identical to an uninstrumented rerun. Contact force and exact-acceleration reference calculations used separate evaluator data and were withheld from the controller."
 }

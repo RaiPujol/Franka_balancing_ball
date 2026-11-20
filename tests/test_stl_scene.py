@@ -9,9 +9,10 @@ from prepare_platform_mesh import prepare_asset
 
 
 class ActualPlatformSceneTests(unittest.TestCase):
-    def test_provisional_mass_dimensions_and_free_ball(self):
+    def test_measured_mass_dimensions_and_free_ball(self):
         m,d,meta=stl_scene.build_model()
-        self.assertAlmostEqual(m.body_mass[meta['tray_body_id']],.20936256678704676,places=10)
+        self.assertAlmostEqual(m.body_mass[meta['tray_body_id']],.1625,places=10)
+        self.assertFalse(meta['updated_print_mass_unmeasured'])
         np.testing.assert_allclose(m.geom_size[meta['tray_geom_id']],[.1165,.1165,.0035])
         self.assertEqual(int(m.jnt_type[m.joint('ball_joint').id]),int(mujoco.mjtJoint.mjJNT_FREE))
         R=d.site_xmat[meta['tray_site_id']].reshape(3,3)

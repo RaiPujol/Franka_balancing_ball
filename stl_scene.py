@@ -3,7 +3,7 @@
 The 3MF source declares millimetres. The STL is translated to the top center
 of the 233 mm square. The support proxy fills the 7 mm underside rib envelope
 and omits the small central dimple; the tab proxy fills its hole and undercuts.
-The attachment is a fixed hand transform. The revised printed mass, bolt mass,
+The revised print weighs 162.5 g. The hand transform is fixed. Bolt mass,
 grip pose, true inertia and friction remain unmeasured.
 No hardware commands are present.
 """
@@ -25,12 +25,11 @@ LOCAL_HASH='4db94a665e78f2249d5a1b693369e9d0373fd85d791587ac7cee1901b6800b79'
 PLATE_SIDE_MM = 233.0
 TAB_DEPTH_MM = 21.0
 TAB_CENTER_OFFSET_MM = (PLATE_SIDE_MM + TAB_DEPTH_MM) / 2
-# Preserve the old print's effective density as a provisional estimate only.
-# Enclosed volumes come from oriented triangles in the original and updated STL.
-NOMINAL_PRINT_MASS_KG = .09277 * (256824.1218112003 / 113800.54298177977)
+# Team measurement of the 233 mm print. Bolt mass is modeled separately.
+MEASURED_PRINT_MASS_KG = 0.1625
 DEFAULTS={
  'platform_scale_m_per_cad_unit':.001,
- 'tray_mass_kg':NOMINAL_PRINT_MASS_KG,
+ 'tray_mass_kg':MEASURED_PRINT_MASS_KG,
  'bolt_mass_kg':0.,  # unmeasured bolt(s), optionally set once weighed
  'mount_offset_m':[TAB_CENTER_OFFSET_MM/1000,0.,.0805], # illustrative top-center pose in hand frame
  # Orient the 35 mm tab width across the 35 mm jaw opening and point the
@@ -159,8 +158,8 @@ def build_model(config=None):
           'collision_surface':'flat 233-unit square; conservative 7-unit rib envelope; central dimple omitted',
           'collision_tab':'conservative solid box; tab undercut not modeled',
           'tab_finger_collision_excluded':True,'attachment_rigid_idealized':True,
-          'nominal_print_mass_source':'old print mass scaled by enclosed STL volume',
-          'updated_print_mass_unmeasured':True,'bolt_mass_unmeasured':True,
+          'nominal_print_mass_source':'team measurement of the revised 233 mm print',
+          'updated_print_mass_unmeasured':False,'bolt_mass_unmeasured':True,
           'inertia_model':'exact closed STL under uniform density; actual print infill unknown',
           'physical_mount_and_friction_unverified':True}
     return model,data,meta

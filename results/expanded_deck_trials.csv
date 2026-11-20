@@ -1,9 +1,9 @@
 seed,task,start_x_m,start_y_m,circle_radius_m,period_s,numerical_pass,stop_reason,task_error_m,min_footprint_margin_m
-401,circle,0.018,-0.012,0.06,24.0,False,wrench feedback unavailable: insufficient_normal_force,,0.04928162462634524
-401,circle,0.018,-0.012,0.08,32.0,False,wrench feedback unavailable: insufficient_normal_force,,0.02705388378315053
-401,centering,0.07,0.0,,,True,,0.0010271829392477267,0.025022453900388195
-401,centering,-0.08,0.06,,,False,ESTIMATOR STOP: wrench feedback unavailable: insufficient_normal_force,,0.014933605849953832
-607,circle,-0.016,0.018,0.06,24.0,False,wrench feedback unavailable: insufficient_normal_force,0.004523773385640898,0.048265990766474066
-607,circle,-0.016,0.018,0.08,32.0,False,wrench feedback unavailable: insufficient_normal_force,,0.028612527486444814
-607,centering,0.07,0.0,,,True,,0.0009782654147336305,0.025009626293178808
-607,centering,-0.08,0.06,,,False,ESTIMATOR STOP: wrench feedback unavailable: insufficient_normal_force,,0.014934713378391154
+401,circle,0.018,-0.012,0.06,24.0,False,wrench feedback unavailable: insufficient_normal_force,,0.04928952195543606
+401,circle,0.018,-0.012,0.08,32.0,False,wrench feedback unavailable: insufficient_normal_force,,0.027093450504671462
+401,centering,0.07,0.0,,,True,,0.0010266284365721445,0.025021643951148934
+401,centering,-0.08,0.06,,,False,ESTIMATOR STOP: wrench feedback unavailable: insufficient_normal_force,,0.01493593390674934
+607,circle,-0.016,0.018,0.06,24.0,False,wrench feedback unavailable: insufficient_normal_force,0.004448617914191328,0.048392110863718266
+607,circle,-0.016,0.018,0.08,32.0,False,wrench feedback unavailable: insufficient_normal_force,,0.028624972817761843
+607,centering,0.07,0.0,,,True,,0.0009765380635485942,0.025010464948121494
+607,centering,-0.08,0.06,,,False,ESTIMATOR STOP: wrench feedback unavailable: insufficient_normal_force,,0.014935396305235604
