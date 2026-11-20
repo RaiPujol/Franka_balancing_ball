@@ -50,7 +50,7 @@ DQ_NOISE = 1e-3                    # rad/s, joint velocity noise
 
 BALL_RADIUS = 0.02135
 PLATE_THICKNESS = 0.006
-PLATE_MASS = 0.25
+PLATE_MASS = 0.1625               # kg, measured print (team, Nov 19)
 
 
 def build_scene(ball_mass, rail="none", out_xml=SCENE_XML):

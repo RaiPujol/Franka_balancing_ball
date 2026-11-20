@@ -35,7 +35,7 @@ import numpy as np
 G = 9.81
 GOLF_BALL_MASS = 0.0459          # kg
 ROLL_ACCEL = (5.0 / 7.0) * G     # m/s^2 per rad of tilt, solid ball rolling without slip
-PLATE_HALF = 0.127               # m, half of the 10 inch paddle
+PLATE_HALF = 0.1165              # m, half of the 233 mm printed deck (team CAD, Nov 19)
 
 # Gains of frankapy's joint impedance controller (its defaults). The real script passes
 # these explicitly, the simulator uses the same numbers. torque = K (q_d - q) - D dq.
