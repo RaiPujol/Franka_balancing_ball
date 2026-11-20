@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torque Map Balancer</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1b1b19; --ink2: #5b5a55; --line: #e3e1db;
+  --accent: #2a63c4; --good: #1f8a4c; --warn: #b7791f; --bad: #c0392b; --c5: #2a78d6; --c6: #e0682f;
+  --muted-bg: #efede8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --panel: #1f1f1d; --ink: #ecebe7; --ink2: #a3a19a; --line: #34332f;
+    --accent: #6c9cf0; --good: #4cc27d; --warn: #e3a44a; --bad: #f06a5a; --c5: #5a9cf0; --c6: #f08a55;
+    --muted-bg: #2a2927;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 16px; margin: 0 8px 0 0; }
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--muted-bg); color: var(--ink2); }
+.badge.robot { background: #fde8e6; color: #9b2c20; }
+@media (prefers-color-scheme: dark) { .badge.robot { background: #4a201b; color: #f6b0a6; } }
+#status { color: var(--ink2); flex: 1; min-width: 180px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px;
+  padding: 7px 12px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.moves::after { content: " \2022 MOVES"; font-size: 11px; font-weight: 700; color: var(--bad); }
+button.primary.moves::after { color: #ffd9d4; }
+button.stop { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 700; }
+nav { display: flex; gap: 4px; padding: 10px 16px 0; flex-wrap: wrap; }
+nav button { border-radius: 8px 8px 0 0; border-bottom: none; }
+nav button.on { background: var(--panel); font-weight: 600; border-color: var(--line); }
+main { padding: 0 16px 16px; }
+.tab { display: none; background: var(--panel); border: 1px solid var(--line); border-radius: 0 10px 10px 10px; padding: 16px; }
+.tab.on { display: block; }
+.grid { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 18px; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+h2 { font-size: 15px; margin: 0 0 8px; }
+h3 { font-size: 13px; margin: 14px 0 6px; color: var(--ink2); text-transform: uppercase; letter-spacing: .04em; }
+p.hint { color: var(--ink2); margin: 4px 0 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-variant-numeric: tabular-nums; }
+.kv > span:nth-child(odd) { color: var(--ink2); }
+.ok { color: var(--good); font-weight: 600; } .warnc { color: var(--warn); font-weight: 600; } .badc { color: var(--bad); font-weight: 600; }
+.big { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; }
+th { color: var(--ink2); font-weight: 500; font-size: 12px; }
+td input { width: 76px; font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+td input.name { width: 54px; }
+label { color: var(--ink2); }
+label input, label select { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 72px; }
+#prompt { display: none; margin: 10px 16px 0; padding: 12px 14px; border-radius: 10px; background: #fff4d6; color: #5c4400;
+  border: 1px solid #f1d27a; font-weight: 600; align-items: center; gap: 12px; flex-wrap: wrap; }
+@media (prefers-color-scheme: dark) { #prompt { background: #3d3110; color: #f6dc93; border-color: #6b561a; } }
+#prompt.on { display: flex; }
+#prompt span { flex: 1; min-width: 200px; }
+svg.deck { width: 100%; max-width: 380px; height: auto; display: block; }
+canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--line); border-radius: 8px; }
+#log { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; background: var(--muted-bg); border-radius: 8px; padding: 8px 10px;
+  height: 170px; overflow: auto; white-space: pre-wrap; margin: 12px 16px 16px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink2); margin: 4px 0; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.safety { font-size: 12px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Torque map balancer</h1>
+  <span id="mode" class="badge">…</span>
+  <span id="status">connecting…</span>
+  <span class="safety">Partner on the e-stop for anything marked MOVES</span>
+  <button class="stop" id="stopBtn" onclick="post('/api/cancel')">STOP</button>
+</header>
+<div id="prompt"><span id="promptMsg"></span><button class="primary" onclick="post('/api/continue')">Continue</button></div>
+<nav>
+  <button data-tab="t1" class="on">1 · Init</button>
+  <button data-tab="t2">2 · Torque map</button>
+  <button data-tab="t3">3 · Balance</button>
+</nav>
+<main>
+<!-- ============================ 1 INIT ============================ -->
+<section class="tab on" id="t1">
+  <div class="grid">
+    <div>
+      <h2>Balance pose</h2>
+      <p class="hint">Gripper straight down, paddle level, joints 5 and 6 axes horizontal (each sees the ball at full
+        sensitivity and tilts the paddle one way). The lab home pose does this.</p>
+      <div class="row">
+        <button class="primary moves" data-job="go_home">Go to balance pose</button>
+      </div>
+      <div class="row">
+        <button data-job="guide" data-params='{"seconds":30}'>Guide mode 30 s</button>
+        <button data-job="use_current">Use current pose</button>
+      </div>
+      <div class="row">
+        <button data-job="grip">Close gripper</button>
+        <button data-job="release">Open gripper</button>
+      </div>
+      <h3>Tilt limit</h3>
+      <div class="row"><label>max tilt (deg) <input id="tiltMax" type="number" step="0.5" min="1" max="6"></label>
+        <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value})">Save</button></div>
+    </div>
+    <div>
+      <h2>Live check</h2>
+      <div class="card kv" id="poseCard"></div>
+      <h3>Joint torques now</h3>
+      <div class="row" style="gap:28px">
+        <div><div class="hint" style="margin:0">joint 5</div><div class="big" id="t5">–</div></div>
+        <div><div class="hint" style="margin:0">joint 6</div><div class="big" id="t6">–</div></div>
+      </div>
+      <p class="hint">Raw torques in N·m. They do not need to be zero: the map subtracts the empty paddle.</p>
+    </div>
+  </div>
+</section>
+<!-- ============================ 2 MAP ============================ -->
+<section class="tab" id="t2">
+  <div class="grid">
+    <div>
+      <h2>Deck (seen from above, tab = robot side)</h2>
+      <svg class="deck" id="deck2" viewBox="-150 -140 290 300"></svg>
+      <p class="hint">Dots: map points (filled = recorded). Ring: where the map puts the ball right now (still paddle).</p>
+    </div>
+    <div>
+      <h2>Map points</h2>
+      <p class="hint">x: from the centre toward the far edge (away from the robot). y: to the left, seen from the robot. mm.
+        Ball still at each mark (putty or a washer), hands off, then Record.</p>
+      <div class="row">
+        <label>seconds per recording <input id="recSec" type="number" value="3" min="1" max="20"></label>
+      </div>
+      <div class="row">
+        <button class="primary" data-job="record_empty" data-params='{"which":"start"}'>1 · Record EMPTY</button>
+        <span class="hint" id="emptyState"></span>
+      </div>
+      <table>
+        <thead><tr><th>name</th><th>x mm</th><th>y mm</th><th>Δ joint 5</th><th>Δ joint 6</th><th>error</th><th></th><th></th></tr></thead>
+        <tbody id="pts"></tbody>
+      </table>
+      <div class="row">
+        <button onclick="addPoint()">+ point</button>
+        <button onclick="savePoints()" id="savePts">Save point list</button>
+        <span class="hint" id="ptsDirty"></span>
+      </div>
+      <div class="row">
+        <button data-job="record_empty" data-params='{"which":"end"}'>Record EMPTY again (drift)</button>
+        <button data-job="fit_map">Fit map</button>
+        <a href="/api/map.csv"><button>Download map CSV</button></a>
+        <a href="/api/calib.json"><button>Download calibration</button></a>
+      </div>
+      <div class="card kv" id="mapCard"></div>
+      <h3>Empty-paddle tilt sweep</h3>
+      <p class="hint">No ball. The paddle rocks for 60 s and the code learns what the paddle alone does to the torques
+        when it tilts. Needed before balancing; redo it if anything on the paddle changes.</p>
+      <div class="row"><button class="primary moves" data-job="tilt_sweep" data-params='{"seconds":60}'>Run tilt sweep</button>
+        <span class="hint" id="sweepState"></span></div>
+    </div>
+  </div>
+</section>
+<!-- ============================ 3 BALANCE ============================ -->
+<section class="tab" id="t3">
+  <div class="grid">
+    <div>
+      <h2>Ball on the deck</h2>
+      <svg class="deck" id="deck3" viewBox="-150 -140 290 300"></svg>
+      <div class="row">
+        <label>seconds <input id="balSec" type="number" value="30" min="5" max="300"></label>
+        <label>gain <input id="balGain" type="number" value="0.6" step="0.1" min="0.1" max="2"></label>
+        <label>axis <select id="balAxis"><option value="both">both</option><option value="x">x only (rail)</option><option value="y">y only (rail)</option></select></label>
+      </div>
+      <div class="row"><button class="primary moves" onclick="startBalance()">Start balancing</button></div>
+      <p class="hint">Target: the joint 5/6 torque change the map recorded with the ball at the centre (point C).
+        It asks you to take the ball off for a 3 s re-zero, then to put it on.</p>
+    </div>
+    <div>
+      <h2>Torque error vs the centre value</h2>
+      <div class="legend"><span><i style="background:var(--c5)"></i>joint 5 (N·m)</span><span><i style="background:var(--c6)"></i>joint 6 (N·m)</span></div>
+      <canvas id="cErr" width="900" height="340"></canvas>
+      <h2 style="margin-top:14px">Ball position estimate</h2>
+      <div class="legend"><span><i style="background:var(--c5)"></i>x (mm)</span><span><i style="background:var(--c6)"></i>y (mm)</span></div>
+      <canvas id="cPos" width="900" height="340"></canvas>
+      <h2 style="margin-top:14px">Paddle tilt</h2>
+      <div class="legend"><span><i style="background:var(--c5)"></i>about x (deg)</span><span><i style="background:var(--c6)"></i>about y (deg)</span></div>
+      <canvas id="cTilt" width="900" height="340"></canvas>
+    </div>
+  </div>
+</section>
+</main>
+<div id="log"></div>
+
+<script>
+const el = id => document.getElementById(id);
+let S = null, pointsDirty = false, localPoints = null, trail = [];
+
+async function post(url, body) {
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(e.error || ('request failed: ' + r.status)); }
+}
+function run(job, params) {
+  const btn = document.querySelector(`[data-job="${job}"]`);
+  if (btn && btn.classList.contains('moves') && !confirm('The arm will MOVE. Partner on the e-stop, everyone clear of the table?')) return;
+  post('/api/run', {job, params: params || {}});
+}
+document.querySelectorAll('[data-job]').forEach(b => b.addEventListener('click', () => {
+  const p = b.dataset.params ? JSON.parse(b.dataset.params) : {};
+  if (b.dataset.job.startsWith('record')) p.seconds = +el('recSec').value || 3;
+  run(b.dataset.job, p);
+}));
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.id === b.dataset.tab));
+  try { localStorage.setItem('tmTab', b.dataset.tab); } catch (e) {}
+}));
+try { const t = localStorage.getItem('tmTab'); if (t) document.querySelector(`nav [data-tab="${t}"]`).click(); } catch (e) {}
+
+function startBalance() {
+  if (!confirm('The arm will MOVE and balance. Partner on the e-stop, everyone clear of the table?')) return;
+  trail = [];
+  post('/api/run', {job: 'balance', params: {seconds: +el('balSec').value, gain: +el('balGain').value, axis: el('balAxis').value}});
+}
+
+// ------------------------------------------------------------------ points table
+function addPoint() {
+  localPoints = localPoints || JSON.parse(JSON.stringify(S.calib.points));
+  localPoints.push({name: 'P' + (localPoints.length + 1), x: 0, y: 0});
+  pointsDirty = true; renderPoints();
+}
+function savePoints() {
+  if (!localPoints) return;
+  post('/api/points', {points: localPoints}).then(() => { pointsDirty = false; localPoints = null; });
+}
+function renderPoints() {
+  const pts = localPoints || S.calib.points, rd = S.calib.readings, fit = S.calib.fit;
+  const errBy = {};
+  if (fit) fit.names.forEach((n, i) => errBy[n] = fit.err_mm[i]);
+  el('pts').innerHTML = pts.map((p, i) => {
+    const r = rd[p.name], d = r && r.d;
+    const e = errBy[p.name];
+    return `<tr>
+      <td><input class="name" value="${p.name}" data-i="${i}" data-k="name"></td>
+      <td><input type="number" step="0.1" value="${p.x}" data-i="${i}" data-k="x"></td>
+      <td><input type="number" step="0.1" value="${p.y}" data-i="${i}" data-k="y"></td>
+      <td>${d ? (d[0] * 1000).toFixed(1) + ' mNm' : '–'}</td>
+      <td>${d ? (d[1] * 1000).toFixed(1) + ' mNm' : '–'}</td>
+      <td>${e !== undefined ? `<span class="${e < 10 ? 'ok' : e < 20 ? 'warnc' : 'badc'}">${e.toFixed(1)} mm</span>` : ''}</td>
+      <td><button ${pointsDirty || !S.calib.empty ? 'disabled' : ''} onclick="run('record_point',{name:'${p.name}',seconds:+el('recSec').value||3})">${r ? 'Re-record' : 'Record'}</button></td>
+      <td><button title="remove" onclick="delPoint(${i})">✕</button></td></tr>`;
+  }).join('');
+  el('pts').querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
+    localPoints = localPoints || JSON.parse(JSON.stringify(S.calib.points));
+    const p = localPoints[+inp.dataset.i];
+    p[inp.dataset.k] = inp.dataset.k === 'name' ? inp.value : +inp.value;
+    pointsDirty = true; el('ptsDirty').textContent = 'unsaved changes: Save point list before recording';
+  }));
+  el('ptsDirty').textContent = pointsDirty ? 'unsaved changes: Save point list before recording' : '';
+}
+function delPoint(i) {
+  localPoints = localPoints || JSON.parse(JSON.stringify(S.calib.points));
+  localPoints.splice(i, 1); pointsDirty = true; renderPoints();
+}
+
+// ------------------------------------------------------------------ deck drawing (mm, paddle frame)
+// screen x = -paddle y (left is left), screen y = -paddle x (far edge up, tab and robot at the bottom)
+function deckSVG(svg, opts) {
+  const h = S.calib.plate_half * 1000, R = S.calib.ball_radius * 1000;
+  const css = getComputedStyle(document.documentElement);
+  const ink2 = css.getPropertyValue('--ink2'), line = css.getPropertyValue('--line'), acc = css.getPropertyValue('--accent');
+  let s = `<rect x="${-h}" y="${-h}" width="${2 * h}" height="${2 * h}" rx="6" fill="none" stroke="${ink2}" stroke-width="1.2"/>`;
+  s += `<rect x="-17.5" y="${h}" width="35" height="21" fill="none" stroke="${ink2}" stroke-width="1.2"/>`;
+  s += `<text x="0" y="${h + 36}" font-size="9" text-anchor="middle" fill="${ink2}">tab · robot side</text>`;
+  s += `<line x1="${-h}" y1="0" x2="${h}" y2="0" stroke="${line}"/><line x1="0" y1="${-h}" x2="0" y2="${h}" stroke="${line}"/>`;
+  s += `<text x="0" y="${-h - 6}" font-size="9" text-anchor="middle" fill="${ink2}">+x (far edge)</text>`;
+  s += `<text x="${-h - 4}" y="3" font-size="9" text-anchor="end" fill="${ink2}">+y</text>`;
+  (S.calib.points || []).forEach(p => {
+    const rec = !!S.calib.readings[p.name];
+    s += `<circle cx="${-p.y}" cy="${-p.x}" r="4" fill="${rec ? acc : 'none'}" stroke="${acc}" stroke-width="1.5"/>`;
+    s += `<text x="${-p.y + 6}" y="${-p.x - 5}" font-size="8" fill="${ink2}">${p.name}</text>`;
+  });
+  if (opts.trail && opts.trail.length > 1)
+    s += `<polyline fill="none" stroke="${css.getPropertyValue('--c6')}" stroke-opacity=".45" stroke-width="1.5" points="${opts.trail.map(q => `${-q[1]},${-q[0]}`).join(' ')}"/>`;
+  if (opts.ball) s += `<circle cx="${-opts.ball[1]}" cy="${-opts.ball[0]}" r="${R}" fill="${css.getPropertyValue('--c6')}" fill-opacity=".18" stroke="${css.getPropertyValue('--c6')}" stroke-width="2"/>`;
+  svg.innerHTML = s;
+}
+
+// ------------------------------------------------------------------ plots
+function plot(cv, t, series, unit) {
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, css = getComputedStyle(document.documentElement);
+  ctx.clearRect(0, 0, W, H);
+  const pad = {l: 64, r: 12, t: 12, b: 28};
+  let lo = Infinity, hi = -Infinity;
+  series.forEach(s => s.data.forEach(v => { if (v !== null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }));
+  if (!isFinite(lo)) { lo = -1; hi = 1; }
+  const m = Math.max(Math.abs(lo), Math.abs(hi), unit.min || 1e-6) * 1.15; lo = -m; hi = m;
+  const t1 = t.length ? t[t.length - 1] : 0, t0 = t1 - 20;
+  const X = v => pad.l + (v - t0) / (t1 - t0 || 1) * (W - pad.l - pad.r), Y = v => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
+  ctx.font = '20px system-ui'; ctx.fillStyle = css.getPropertyValue('--ink2'); ctx.strokeStyle = css.getPropertyValue('--line'); ctx.lineWidth = 1.5;
+  [hi * 0.8, hi * 0.4, 0, lo * 0.4, lo * 0.8].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(W - pad.r, Y(v)); ctx.stroke();
+    ctx.fillText((unit.scale ? v * unit.scale : v).toFixed(unit.digits), 4, Y(v) + 6);
+  });
+  ctx.fillText('last 20 s', W - 110, H - 6);
+  series.forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 3; ctx.beginPath(); let on = false;
+    s.data.forEach((v, i) => { if (v === null) { on = false; return; } const x = X(t[i]), y = Y(v); on ? ctx.lineTo(x, y) : ctx.moveTo(x, y); on = true; });
+    ctx.stroke();
+  });
+}
+
+// ------------------------------------------------------------------ refresh
+function fmt(v, d = 1) { return v === null || v === undefined ? '–' : (+v).toFixed(d); }
+function verdictSpan(v) { return v ? `<span class="${v === 'PASS' ? 'ok' : v === 'MARGINAL' ? 'warnc' : 'badc'}">${v}</span>` : '–'; }
+function render() {
+  const css = getComputedStyle(document.documentElement);
+  el('mode').textContent = S.mode; el('mode').className = 'badge' + (S.mode === 'ROBOT' ? ' robot' : '');
+  el('status').textContent = S.busy ? `busy: ${S.status}` : 'idle';
+  el('stopBtn').disabled = !S.busy;
+  document.querySelectorAll('[data-job], .tab button.primary').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
+  el('prompt').classList.toggle('on', !!S.prompt); el('promptMsg').textContent = S.prompt || '';
+  if (document.activeElement !== el('tiltMax')) el('tiltMax').value = S.calib.tilt_max_deg;
+
+  const P = S.pose;
+  if (P) {
+    const c = (ok) => ok ? 'ok' : 'badc';
+    el('poseCard').innerHTML = `
+      <span>joint 5 axis from horizontal</span><span class="${c(P.j5_axis_from_horizontal_deg < 10)}">${fmt(P.j5_axis_from_horizontal_deg)}°</span>
+      <span>joint 6 axis from horizontal</span><span class="${c(P.j6_axis_from_horizontal_deg < 10)}">${fmt(P.j6_axis_from_horizontal_deg)}°</span>
+      <span>paddle from level (model)</span><span class="${c(P.paddle_from_level_deg < 5)}">${fmt(P.paddle_from_level_deg)}°</span>
+      <span>closest joint limit</span><span class="${c(P.joint_limit_margin_rad > 0.25)}">${fmt(P.joint_limit_margin_rad, 2)} rad</span>
+      <span>balance pose saved</span><span>${S.calib.has_pose ? '<span class="ok">yes</span>' : '<span class="badc">no</span>'}</span>
+      <span>verdict</span><span>${P.ok ? '<span class="ok">PASS</span>' : '<span class="badc">adjust the pose</span>'}</span>`;
+  }
+  if (S.tau) { el('t5').textContent = (+S.tau[4]).toFixed(3); el('t6').textContent = (+S.tau[5]).toFixed(3); }
+
+  el('emptyState').textContent = S.calib.empty ? ('recorded' + (S.calib.empty_end ? ' · drift check done' : '')) : 'not recorded yet';
+  const ae = document.activeElement;
+  if (!(ae && ae.closest && ae.closest('#pts'))) renderPoints();
+  const F = S.calib.fit;
+  el('mapCard').innerHTML = F ? `
+      <span>points in the map</span><span>${F.names.length}</span>
+      <span>slope joint 5 / joint 6</span><span>${Math.max(...F.slope_mNm_per_cm[0]).toFixed(1)} / ${Math.max(...F.slope_mNm_per_cm[1]).toFixed(1)} mNm/cm</span>
+      <span>expected for this ball</span><span>≈ ${F.expected_slope_mNm_per_cm.toFixed(1)} mNm/cm</span>
+      <span>position error at the points (rms)</span><span>${F.rms_mm.toFixed(1)} mm</span>
+      <span>noise, still paddle, one sample</span><span>${F.noise_mm_per_sample.map(v => v.toFixed(1)).join(' / ')} mm</span>
+      <span>drift (empty again)</span><span>${F.drift_mm !== undefined ? F.drift_mm.toFixed(1) + ' mm' : 'not checked'}</span>
+      <span>static map</span><span>${verdictSpan(F.verdict)}</span>
+      <span>noise while tilting (sweep)</span><span>${F.moving_noise_mm ? F.moving_noise_mm.map(v => v.toFixed(0)).join(' / ') + ' mm' : 'no sweep yet'}</span>
+      <span>moving</span><span>${verdictSpan(F.moving_verdict)}</span>`
+    : '<span>map</span><span>record EMPTY, then at least 3 points spread in x and y</span>';
+  el('sweepState').textContent = S.calib.swept ? 'done' : 'not done yet';
+
+  const L = S.live, n = L.t.length;
+  const lastNum = arr => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i] !== null) return arr[i]; return null; };
+  const mx = lastNum(L.measx), my = lastNum(L.measy);
+  deckSVG(el('deck2'), {ball: (!S.busy && mx !== null) ? [mx * 1000, my * 1000] : null});
+  const ex = lastNum(L.estx), ey = lastNum(L.esty);
+  if (S.busy === 'balance' && ex !== null) { trail.push([ex * 1000, ey * 1000]); trail = trail.slice(-150); }
+  deckSVG(el('deck3'), {ball: (S.busy === 'balance' && ex !== null) ? [ex * 1000, ey * 1000] : null, trail});
+  plot(el('cErr'), L.t, [{data: L.err5, color: css.getPropertyValue('--c5')}, {data: L.err6, color: css.getPropertyValue('--c6')}], {digits: 3, min: 0.02});
+  plot(el('cPos'), L.t, [{data: L.estx.map((v, i) => v !== null ? v * 1000 : (L.measx[i] !== null ? L.measx[i] * 1000 : null)), color: css.getPropertyValue('--c5')},
+                         {data: L.esty.map((v, i) => v !== null ? v * 1000 : (L.measy[i] !== null ? L.measy[i] * 1000 : null)), color: css.getPropertyValue('--c6')}], {digits: 0, min: 20});
+  plot(el('cTilt'), L.t, [{data: L.tilta, color: css.getPropertyValue('--c5')}, {data: L.tiltb, color: css.getPropertyValue('--c6')}], {digits: 1, min: 1});
+
+  const log = el('log'), atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+  log.textContent = S.logs.join('\n');
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+async function tick() {
+  try { const r = await fetch('/api/state'); S = await r.json(); render(); }
+  catch (e) { el('status').textContent = 'no connection to app.py'; }
+  setTimeout(tick, 250);
+}
+tick();
+</script>
+</body>
+</html>
