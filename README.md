@@ -2,7 +2,7 @@
 
 This MuJoCo simulation puts a standard golf ball on the revised 233 × 233 mm printed tray. The Franka hand holds the tab with the deck pointing away from the base. A delayed joint-torque estimate supplies the ball feedback for carrying, centering, circle, rounded-square and figure-eight trials.
 
-The [verification results](RESULTS.md) include failed trials, controller comparisons and the limits of the modeled mount.
+The [verification results](RESULTS.md) include failed trials, controller comparisons and the limits of the modeled mount. Those results use the earlier nominal golf ball. For the team’s measured 74.5 mm, 193 g ball, see the separate [measured-ball study](studies/actual_ball_193g/README.md).
 
 ## Reproduce a trial
 

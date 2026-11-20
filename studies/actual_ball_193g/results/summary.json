@@ -1,0 +1,2025 @@
+{
+  "original_policy": {
+    "task": {
+      "carrying": [
+        5,
+        6
+      ],
+      "centering": [
+        4,
+        6
+      ],
+      "circle": [
+        0,
+        6
+      ],
+      "figure_eight": [
+        0,
+        6
+      ],
+      "rounded_square": [
+        0,
+        6
+      ]
+    },
+    "case": {
+      "noisy_50ms": [
+        4,
+        10
+      ],
+      "noisy_80ms": [
+        1,
+        10
+      ],
+      "nominal_20ms": [
+        4,
+        10
+      ]
+    },
+    "method": {
+      "lqr": [
+        9,
+        30
+      ]
+    },
+    "passes": [
+      9,
+      30
+    ],
+    "completed": 30,
+    "minimum_footprint_margin_mm": 41.14664433074152,
+    "maximum_tray_pos_error_mm": 4.2144166309617495,
+    "any_missing_contact_after_warmup": 0,
+    "stops": {},
+    "shape_rms_range_mm": [
+      10.421770058274507,
+      11.684385090320456
+    ]
+  },
+  "methods": {
+    "kalman_pd": {
+      "task": {
+        "carrying": [
+          3,
+          6
+        ],
+        "centering": [
+          2,
+          6
+        ],
+        "circle": [
+          0,
+          6
+        ],
+        "figure_eight": [
+          0,
+          6
+        ],
+        "rounded_square": [
+          0,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          1,
+          10
+        ],
+        "noisy_80ms": [
+          0,
+          10
+        ],
+        "nominal_20ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "kalman_pd": [
+          5,
+          30
+        ]
+      },
+      "passes": [
+        5,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 8.651990030005871,
+      "maximum_tray_pos_error_mm": 15.462118756039441,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        6.246074775837107,
+        33.46673705011618
+      ]
+    },
+    "lqr": {
+      "task": {
+        "carrying": [
+          5,
+          6
+        ],
+        "centering": [
+          4,
+          6
+        ],
+        "circle": [
+          0,
+          6
+        ],
+        "figure_eight": [
+          0,
+          6
+        ],
+        "rounded_square": [
+          0,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ],
+        "noisy_80ms": [
+          1,
+          10
+        ],
+        "nominal_20ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          9,
+          30
+        ]
+      },
+      "passes": [
+        9,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 41.14664433074152,
+      "maximum_tray_pos_error_mm": 4.2144166309617495,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.421770058274507,
+        11.684385090320456
+      ]
+    },
+    "mpc": {
+      "task": {
+        "carrying": [
+          6,
+          6
+        ],
+        "centering": [
+          6,
+          6
+        ],
+        "circle": [
+          0,
+          6
+        ],
+        "figure_eight": [
+          0,
+          6
+        ],
+        "rounded_square": [
+          0,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ],
+        "noisy_80ms": [
+          4,
+          10
+        ],
+        "nominal_20ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          12,
+          30
+        ]
+      },
+      "passes": [
+        12,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 41.490528738202876,
+      "maximum_tray_pos_error_mm": 4.236266289338408,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        14.34583579967156,
+        15.332393141752535
+      ]
+    },
+    "pd": {
+      "task": {
+        "carrying": [
+          1,
+          6
+        ],
+        "centering": [
+          0,
+          6
+        ],
+        "circle": [
+          0,
+          6
+        ],
+        "figure_eight": [
+          0,
+          6
+        ],
+        "rounded_square": [
+          0,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ],
+        "noisy_80ms": [
+          0,
+          10
+        ],
+        "nominal_20ms": [
+          1,
+          10
+        ]
+      },
+      "method": {
+        "pd": [
+          1,
+          30
+        ]
+      },
+      "passes": [
+        1,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": -16.296174444721853,
+      "maximum_tray_pos_error_mm": 21.032790954242287,
+      "any_missing_contact_after_warmup": 4,
+      "stops": {},
+      "shape_rms_range_mm": [
+        6.459222443793758,
+        59.79453474612596
+      ]
+    }
+  },
+  "lqr_stress": {
+    "mu=0.1 k=0.200000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.32055336703706,
+      "maximum_tray_pos_error_mm": 4.392938515063819,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.030622084235994,
+        6.462476451003115
+      ]
+    },
+    "mu=0.1 k=0.400000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.36090328123358,
+      "maximum_tray_pos_error_mm": 4.430236301748519,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        4.9914719877631635,
+        6.962909222876499
+      ]
+    },
+    "mu=0.1 k=0.666667": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 45.479068581263455,
+      "maximum_tray_pos_error_mm": 4.467387501011514,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.296880958044951,
+        6.843264058029681
+      ]
+    },
+    "mu=0.3 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.98409316095815,
+      "maximum_tray_pos_error_mm": 4.161950253655443,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.484100292032792,
+        11.498680326823656
+      ]
+    },
+    "mu=0.3 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.45455841620643,
+      "maximum_tray_pos_error_mm": 4.20911205666103,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.45904792859626,
+        11.481399989222634
+      ]
+    },
+    "mu=0.3 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.942890466865755,
+      "maximum_tray_pos_error_mm": 4.255831191162292,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.421813952241887,
+        11.463522449784168
+      ]
+    },
+    "mu=0.6 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.61722871354712,
+      "maximum_tray_pos_error_mm": 4.158842432566095,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.496366273902861,
+        11.50811196575427
+      ]
+    },
+    "mu=0.6 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.17343165356213,
+      "maximum_tray_pos_error_mm": 4.206905432997064,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.471429444394962,
+        11.49412406999813
+      ]
+    },
+    "mu=0.6 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          4,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          4,
+          10
+        ]
+      },
+      "passes": [
+        4,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.732978208901834,
+      "maximum_tray_pos_error_mm": 4.254318250228162,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        10.432948391097773,
+        11.477559543745633
+      ]
+    }
+  },
+  "leveled_policy": {
+    "task": {
+      "carrying": [
+        5,
+        6
+      ],
+      "centering": [
+        4,
+        6
+      ],
+      "circle": [
+        6,
+        6
+      ],
+      "figure_eight": [
+        6,
+        6
+      ],
+      "rounded_square": [
+        6,
+        6
+      ]
+    },
+    "case": {
+      "noisy_50ms": [
+        10,
+        10
+      ],
+      "noisy_80ms": [
+        7,
+        10
+      ],
+      "nominal_20ms": [
+        10,
+        10
+      ]
+    },
+    "method": {
+      "lqr": [
+        27,
+        30
+      ]
+    },
+    "passes": [
+      27,
+      30
+    ],
+    "completed": 30,
+    "minimum_footprint_margin_mm": 41.14664433074047,
+    "maximum_tray_pos_error_mm": 4.10987592780715,
+    "any_missing_contact_after_warmup": 0,
+    "stops": {},
+    "shape_rms_range_mm": [
+      0.9021094992462261,
+      2.751008661165678
+    ]
+  },
+  "shape_start_tilt_degrees": [
+    0.36136710770893354,
+    0.3931092352004704
+  ],
+  "leveled_methods": {
+    "kalman_pd": {
+      "task": {
+        "carrying": [
+          3,
+          6
+        ],
+        "centering": [
+          2,
+          6
+        ],
+        "circle": [
+          4,
+          6
+        ],
+        "figure_eight": [
+          4,
+          6
+        ],
+        "rounded_square": [
+          4,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          7,
+          10
+        ],
+        "noisy_80ms": [
+          0,
+          10
+        ],
+        "nominal_20ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "kalman_pd": [
+          17,
+          30
+        ]
+      },
+      "passes": [
+        17,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 19.04262038193239,
+      "maximum_tray_pos_error_mm": 15.462118756039636,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        0.7684158197464435,
+        31.829588677098453
+      ]
+    },
+    "lqr": {
+      "task": {
+        "carrying": [
+          5,
+          6
+        ],
+        "centering": [
+          4,
+          6
+        ],
+        "circle": [
+          6,
+          6
+        ],
+        "figure_eight": [
+          6,
+          6
+        ],
+        "rounded_square": [
+          6,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ],
+        "noisy_80ms": [
+          7,
+          10
+        ],
+        "nominal_20ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          27,
+          30
+        ]
+      },
+      "passes": [
+        27,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 41.14664433074047,
+      "maximum_tray_pos_error_mm": 4.10987592780715,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        0.9021094992462261,
+        2.751008661165678
+      ]
+    },
+    "mpc": {
+      "task": {
+        "carrying": [
+          6,
+          6
+        ],
+        "centering": [
+          6,
+          6
+        ],
+        "circle": [
+          6,
+          6
+        ],
+        "figure_eight": [
+          6,
+          6
+        ],
+        "rounded_square": [
+          6,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ],
+        "noisy_80ms": [
+          10,
+          10
+        ],
+        "nominal_20ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          30,
+          30
+        ]
+      },
+      "passes": [
+        30,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 41.49052873820261,
+      "maximum_tray_pos_error_mm": 4.1318852916730835,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.0863493231401766,
+        2.4536537848345574
+      ]
+    },
+    "pd": {
+      "task": {
+        "carrying": [
+          1,
+          6
+        ],
+        "centering": [
+          0,
+          6
+        ],
+        "circle": [
+          2,
+          6
+        ],
+        "figure_eight": [
+          2,
+          6
+        ],
+        "rounded_square": [
+          2,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ],
+        "noisy_80ms": [
+          0,
+          10
+        ],
+        "nominal_20ms": [
+          7,
+          10
+        ]
+      },
+      "method": {
+        "pd": [
+          7,
+          30
+        ]
+      },
+      "passes": [
+        7,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": -17.92050759226989,
+      "maximum_tray_pos_error_mm": 21.03279095424468,
+      "any_missing_contact_after_warmup": 9,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.786436282879727,
+        55.2046434857472
+      ]
+    }
+  },
+  "leveled_stress": {
+    "mu=0.1 k=0.200000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.32055336703796,
+      "maximum_tray_pos_error_mm": 4.094036864631615,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.150413502424897,
+        6.438180154550907
+      ]
+    },
+    "mu=0.1 k=0.400000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.36090328123353,
+      "maximum_tray_pos_error_mm": 4.12021561584042,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.320723433135011,
+        6.082655372386892
+      ]
+    },
+    "mu=0.1 k=0.666667": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 45.479068581262375,
+      "maximum_tray_pos_error_mm": 4.156023904783778,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.079468136866683,
+        5.542445724631711
+      ]
+    },
+    "mu=0.3 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.984093160958174,
+      "maximum_tray_pos_error_mm": 4.058644185260401,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.4322693854373958,
+        1.8391875222516427
+      ]
+    },
+    "mu=0.3 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.45455841620605,
+      "maximum_tray_pos_error_mm": 4.099021375078737,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.1837126170303869,
+        1.624093833311417
+      ]
+    },
+    "mu=0.3 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.942890466865144,
+      "maximum_tray_pos_error_mm": 4.141019764728953,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        0.9904502845606534,
+        1.5207227243125547
+      ]
+    },
+    "mu=0.6 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.617228713547675,
+      "maximum_tray_pos_error_mm": 4.0559906503911565,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.5079676877173653,
+        1.914657783479244
+      ]
+    },
+    "mu=0.6 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.173431653561764,
+      "maximum_tray_pos_error_mm": 4.097038711072017,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.2305621487542844,
+        1.6978268388062163
+      ]
+    },
+    "mu=0.6 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.73297820890184,
+      "maximum_tray_pos_error_mm": 4.139522596983536,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.0764162762917502,
+        1.6062985961173883
+      ]
+    }
+  },
+  "new_starts": {
+    "lqr": {
+      "task": {
+        "carrying": [
+          5,
+          6
+        ],
+        "centering": [
+          4,
+          6
+        ],
+        "circle": [
+          6,
+          6
+        ],
+        "figure_eight": [
+          6,
+          6
+        ],
+        "rounded_square": [
+          6,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ],
+        "noisy_80ms": [
+          7,
+          10
+        ],
+        "nominal_20ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "lqr": [
+          27,
+          30
+        ]
+      },
+      "passes": [
+        27,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 43.34903835963502,
+      "maximum_tray_pos_error_mm": 4.152528894455766,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        0.8906685625010575,
+        2.893768940474173
+      ]
+    },
+    "mpc": {
+      "task": {
+        "carrying": [
+          6,
+          6
+        ],
+        "centering": [
+          6,
+          6
+        ],
+        "circle": [
+          6,
+          6
+        ],
+        "figure_eight": [
+          6,
+          6
+        ],
+        "rounded_square": [
+          6,
+          6
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ],
+        "noisy_80ms": [
+          10,
+          10
+        ],
+        "nominal_20ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          30,
+          30
+        ]
+      },
+      "passes": [
+        30,
+        30
+      ],
+      "completed": 30,
+      "minimum_footprint_margin_mm": 43.26739500081398,
+      "maximum_tray_pos_error_mm": 4.136252177994502,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.4349335175831759,
+        2.7425207857940377
+      ]
+    }
+  },
+  "leveled_mpc_stress": {
+    "mu=0.1 k=0.200000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.342750011212594,
+      "maximum_tray_pos_error_mm": 4.121507723428503,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        6.1217200938084115,
+        7.1879752278155475
+      ]
+    },
+    "mu=0.1 k=0.400000": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.40262595158865,
+      "maximum_tray_pos_error_mm": 4.150030560466468,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.0779838675383875,
+        7.1518549506827584
+      ]
+    },
+    "mu=0.1 k=0.666667": {
+      "task": {
+        "carrying": [
+          0,
+          2
+        ],
+        "centering": [
+          0,
+          2
+        ],
+        "circle": [
+          0,
+          2
+        ],
+        "figure_eight": [
+          0,
+          2
+        ],
+        "rounded_square": [
+          0,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          0,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          0,
+          10
+        ]
+      },
+      "passes": [
+        0,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 45.52814953268001,
+      "maximum_tray_pos_error_mm": 4.1710384137755225,
+      "any_missing_contact_after_warmup": 10,
+      "stops": {},
+      "shape_rms_range_mm": [
+        5.551874681424257,
+        6.478640458217797
+      ]
+    },
+    "mu=0.3 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.996001823475225,
+      "maximum_tray_pos_error_mm": 4.0400837727453105,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.8688120474268846,
+        2.59685249252391
+      ]
+    },
+    "mu=0.3 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.49052873820261,
+      "maximum_tray_pos_error_mm": 4.080831622156399,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.7238901340108594,
+        2.0937717435164283
+      ]
+    },
+    "mu=0.3 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.99886300183319,
+      "maximum_tray_pos_error_mm": 4.1158882227749185,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.5294683442748545,
+        1.831913195948169
+      ]
+    },
+    "mu=0.6 k=0.200000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 38.62802390175714,
+      "maximum_tray_pos_error_mm": 4.037461827986912,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.9175023033247185,
+        2.6783287358489662
+      ]
+    },
+    "mu=0.6 k=0.400000": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 41.20868569028193,
+      "maximum_tray_pos_error_mm": 4.078944412804091,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.7229090329153778,
+        2.1744826704570235
+      ]
+    },
+    "mu=0.6 k=0.666667": {
+      "task": {
+        "carrying": [
+          2,
+          2
+        ],
+        "centering": [
+          2,
+          2
+        ],
+        "circle": [
+          2,
+          2
+        ],
+        "figure_eight": [
+          2,
+          2
+        ],
+        "rounded_square": [
+          2,
+          2
+        ]
+      },
+      "case": {
+        "noisy_50ms": [
+          10,
+          10
+        ]
+      },
+      "method": {
+        "mpc": [
+          10,
+          10
+        ]
+      },
+      "passes": [
+        10,
+        10
+      ],
+      "completed": 10,
+      "minimum_footprint_margin_mm": 43.78868952788622,
+      "maximum_tray_pos_error_mm": 4.114789140470273,
+      "any_missing_contact_after_warmup": 0,
+      "stops": {},
+      "shape_rms_range_mm": [
+        1.519353185657948,
+        1.833910135560747
+      ]
+    }
+  }
+}
