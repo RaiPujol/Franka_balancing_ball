@@ -32,7 +32,13 @@ Use the actual topic name if it differs and confirm its type is `franka_interfac
 3. Check the mechanical fit and clearances with the real gripper. The nominal CAD scene reported a deck-to-finger gap of about 0.16 mm at the sampled poses, and treats the attachment as rigid.
 4. Collect an empty-tray recording and at least five ball locations spanning both tray axes. One possible set is the center and (±30 mm, ±30 mm). Measure the actual locations. Take each recording at the same stationary robot pose, mounting and load settings, using the lab's procedure for safely placing the ball. Repeat the empty recording afterwards to assess drift.
 
-For each run, change the output filename and label. The script creates a new file and will not overwrite an existing one:
+For the first empty-tray baseline, the passive initialization tool captures the state and summarizes the torque reference for all joints. It writes new files with unique names. Run it only after the plate is empty and the arm is stationary:
+
+```sh
+python3 -m hardware.initialize_torque_baseline --topic /robot_state_publisher_node_1/robot_state --output-dir logs/session_name
+```
+
+Create or substitute an existing output directory and verify the topic. The result is a software comparison reference at this pose. It does not alter the robot or physically zero the torque sensors. For other recordings, change the output filename and label. The script creates a new file and will not overwrite an existing one:
 
 ```sh
 mkdir -p logs
