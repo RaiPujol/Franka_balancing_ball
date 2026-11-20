@@ -55,13 +55,18 @@ running step and levels the paddle; Ctrl-C in the terminal stops everything.
 ### 1 · Init
 1. *Close gripper* on the tab (open it first if needed).
 2. *Go to balance pose* (MOVES), or *Guide mode 30 s* then *Use current pose*.
-3. The live check must show joint 5 and joint 6 axes under 10° from horizontal, paddle
-   under 5° from level: **PASS**. Put a phone level on the paddle too.
-4. *Run track test* (MOVES, no ball): each tilt axis rocks alone for 15 s. Both axes must
-   PASS. If a joint stops following, it stops with the joint's target, actual angle, torque
-   and velocity: copy that line and send `logs/track_*.npz`.
-5. Optional: *wrist stiffness 2x stiffer* (Settings) if joint 6 lags or sticks; then redo
-   the tilt sweep.
+3. The live check must show joint 5 and joint 6 axes under 10° from horizontal: **PASS**.
+4. **Level the paddle**: phone level on the deck, then *Far edge up/down* and *Left edge
+   up/down* (0.1 to 0.5° steps, MOVES) until it reads 0, then *Use current pose*. The home
+   pose has the flange level; a deck that still tilts there is the tab sitting at an angle in
+   the fingers or the deck flexing under its own weight. Level first, then map.
+5. Optional *Run track test* (MOVES, no ball): each tilt axis rocks alone for 15 s.
+
+Joint errors: by default (Settings: *warn, keep going*) a wrist joint that lags its target
+is logged and the run continues. Choose *stop* to stop on it instead. The hard limits always
+stay on: max tilt, a 0.35 rad joint window, a 7° gross following error, unexpected torque,
+ball estimate off the deck. If joint 6 really sticks, try *wrist stiffness 2x*, and test
+balancing on the left/right axis alone (axis y, joint 5) first.
 
 ### 2 · Torque map
 1. Ball off, hands off: **Record EMPTY**.

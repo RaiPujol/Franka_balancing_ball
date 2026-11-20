@@ -128,7 +128,7 @@ class UIState:
                     "empty": c.empty is not None, "empty_end": c.empty_end is not None,
                     "fit": c.fit, "swept": c.tare_W is not None, "tilt_max_deg": c.tilt_max_deg,
                     "ball_mass": c.ball_mass, "plate_half": kin.PLATE_HALF, "ball_radius": kin.BALL_RADIUS,
-                    "grip_to_c_mm": kin.GRIP_TO_C * 1000.0, "wrist_scale": c.wrist_scale,
+                    "grip_to_c_mm": kin.GRIP_TO_C * 1000.0, "wrist_scale": c.wrist_scale, "joint_watch": c.joint_watch,
                 },
             }
 
@@ -207,6 +207,8 @@ def make_handler(state, jobs):
                 c = state.calib
                 if "tilt_max_deg" in body:
                     c.tilt_max_deg = float(np.clip(float(body["tilt_max_deg"]), 1.0, 6.0))
+                if body.get("joint_watch") in ("warn", "stop"):
+                    c.joint_watch = body["joint_watch"]
                 if "wrist_scale" in body:
                     c.wrist_scale = float(tm.GAIN_SCALES.get(str(body["wrist_scale"]), 1.0))
                     c.tare_W = c.tare_sigma = None      # the tilt sweep depends on the gains
@@ -231,6 +233,7 @@ def run_job(io, state, name, params):
         "record_point": lambda: tm.job_record_point(io, c, state, params["name"], float(params.get("seconds", 3))),
         "fit_map": lambda: tm.job_fit_map(io, c, state),
         "track": lambda: tm.job_track(io, c, state),
+        "nudge": lambda: tm.job_nudge(io, c, state, params.get("axis", "x"), float(params.get("deg", 0.2))),
         "tilt_sweep": lambda: tm.job_tilt_sweep(io, c, state, float(params.get("seconds", 60))),
         "balance": lambda: tm.job_balance(io, c, state, float(params.get("seconds", 30)),
                                           float(params.get("gain", 0.6)), params.get("axis", "both")),

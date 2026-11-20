@@ -101,6 +101,18 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
         <button data-job="guide" data-params='{"seconds":30}'>Guide mode 30 s</button>
         <button data-job="use_current">Use current pose</button>
       </div>
+      <h3>Level the paddle</h3>
+      <p class="hint">Put a phone level on the paddle. Nudge until it reads 0, then <b>Use current pose</b>
+        (that clears the map: level first, then map).</p>
+      <div class="row"><label>step <select id="nudgeDeg"><option>0.1</option><option selected>0.2</option><option>0.5</option></select> deg</label></div>
+      <div class="row">
+        <button class="moves" onclick="nudge('x', 1)">Far edge up</button>
+        <button class="moves" onclick="nudge('x', -1)">Far edge down</button>
+      </div>
+      <div class="row">
+        <button class="moves" onclick="nudge('y', 1)">Left edge up</button>
+        <button class="moves" onclick="nudge('y', -1)">Left edge down</button>
+      </div>
       <div class="row">
         <button data-job="grip">Close gripper</button>
         <button data-job="release">Open gripper</button>
@@ -111,8 +123,9 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
       <div class="row"><button class="primary moves" data-job="track">Run track test</button></div>
       <h3>Settings</h3>
       <div class="row"><label>max tilt (deg) <input id="tiltMax" type="number" step="0.5" min="1" max="6"></label>
+        <label>joint errors <select id="jointWatch"><option value="warn">warn, keep going</option><option value="stop">stop</option></select></label>
         <label>wrist stiffness <select id="wristScale"><option value="1">default (frankapy)</option><option value="2">2x stiffer</option></select></label>
-        <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value, wrist_scale: el('wristScale').value})">Save</button></div>
+        <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value, wrist_scale: el('wristScale').value, joint_watch: el('jointWatch').value})">Save</button></div>
       <p class="hint">Changing the stiffness clears the tilt sweep (redo it before balancing).</p>
     </div>
     <div>
@@ -226,6 +239,9 @@ document.querySelectorAll('nav button').forEach(b => b.addEventListener('click',
 }));
 try { const t = localStorage.getItem('tmTab'); if (t) document.querySelector(`nav [data-tab="${t}"]`).click(); } catch (e) {}
 
+function nudge(axis, sign) {
+  post('/api/run', {job: 'nudge', params: {axis, deg: sign * +el('nudgeDeg').value}});
+}
 function startBalance() {
   if (!confirm('The arm will MOVE and balance. Partner on the e-stop, everyone clear of the table?')) return;
   trail = [];
@@ -329,10 +345,11 @@ function render() {
   el('mode').textContent = S.mode; el('mode').className = 'badge' + (S.mode === 'ROBOT' ? ' robot' : '');
   el('status').textContent = S.busy ? `busy: ${S.status}` : 'idle';
   el('stopBtn').disabled = !S.busy;
-  document.querySelectorAll('[data-job], .tab button.primary').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
+  document.querySelectorAll('[data-job], .tab button.primary, .tab button.moves').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
   el('prompt').classList.toggle('on', !!S.prompt); el('promptMsg').textContent = S.prompt || '';
   if (document.activeElement !== el('tiltMax')) el('tiltMax').value = S.calib.tilt_max_deg;
   if (document.activeElement !== el('wristScale')) el('wristScale').value = String(Math.round(S.calib.wrist_scale));
+  if (document.activeElement !== el('jointWatch')) el('jointWatch').value = S.calib.joint_watch;
 
   const P = S.pose;
   if (P) {

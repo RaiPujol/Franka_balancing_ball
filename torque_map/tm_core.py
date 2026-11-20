@@ -67,6 +67,7 @@ class Calib:
         self.tare_sigma = None
         self.frame = "grip"                     # point x measured from the grip point
         self.wrist_scale = 1.0                  # 1 = frankapy default gains on joints 5-7
+        self.joint_watch = "warn"               # "warn": log a lagging wrist joint and carry on; "stop": stop
 
     # -- persistence
     def to_json(self):
@@ -147,6 +148,27 @@ def job_guide(io, calib, ctx, seconds=30.0):
     ctx.status(f"guide mode for {seconds:.0f} s: move the arm by hand, then let go")
     io.guide(seconds)
     ctx.log("guide mode ended. Press 'Use current pose' if the paddle is where you want it.")
+
+
+def job_nudge(io, calib, ctx, axis="x", deg=0.2):
+    """Tilt the paddle by a small step from where it is now (wrist only), to level it with a
+    phone level. Then press 'Use current pose'. axis "x": raise the far edge (+) / lower it (-);
+    axis "y": raise the left edge (+) / lower it (-)."""
+    q = np.asarray(io.read()["q"], dtype=float)
+    servo = TiltServo(q, calib.T_paddle, 0.02, np.radians(3.0))
+    step = np.radians(float(deg))
+    # tilt b about base y raises the near edge for +b, so the far edge goes up for -b;
+    # tilt a about base x raises the left (+y) edge for +a
+    tilt = np.array([step, 0.0]) if axis == "y" else np.array([0.0, -step])
+    q_new = servo._ik(tilt)
+    if np.max(np.abs(q_new - q)) > np.radians(3.0):
+        raise SafetyStop("nudge too large")
+    io.goto(q_new, 1.5)
+    io.wait(0.5)
+    rep = pose_report(np.asarray(io.read()["q"], dtype=float))
+    ctx.log(f"nudged {'far edge' if axis == 'x' else 'left edge'} {'up' if step > 0 else 'down'} {abs(float(deg)):.2f} deg. "
+            f"Model says paddle {rep['paddle_from_level_deg']:.2f} deg from level. When the phone level reads 0, "
+            "press 'Use current pose'.")
 
 
 def job_use_current(io, calib, ctx):
@@ -293,9 +315,12 @@ class Runner:
         self.io.goto(self.calib.q0, 4.0)
         self.servo.reset()
         self._vel, self._vz, self._late, self.accel_z = [], None, np.zeros(3), 0.0
+        self.lag_events, self._last_warn = 0, -1e9
         self.io.start_stream(self.calib.q0, self.k_gains, self.d_gains)
 
     def stop(self):
+        if getattr(self, "lag_events", 0):
+            self.ctx.log(f"wrist joints lagged their targets {self.lag_events} times in this run (see the log file)")
         try:
             for _ in range(int(1.0 / self.dt)):
                 self.io.command(self.servo.step([0.0, 0.0]))
@@ -325,6 +350,15 @@ class Runner:
             raise SafetyStop("arm is not following the command (blocked or pushed?)")
         err = np.abs(q[4:7] - self.servo.q[4:7])
         self._late = np.where(err > TRACK_TOL, self._late + self.dt, 0.0)
+        if np.any(self._late > TRACK_TIME) and self.calib.joint_watch != "stop":
+            j = int(np.argmax(self._late)) + 5
+            i = j - 1
+            self.lag_events += 1
+            if self.t - self._last_warn > 5.0:
+                self._last_warn = self.t
+                self.ctx.log(f"warning: joint {j} lags its target by {np.degrees(abs(q[i] - self.servo.q[i])):.1f} deg "
+                             f"at t={self.t:.1f} s (torque {tau[i]:+.2f} Nm). Carrying on (joint errors set to warn).")
+            self._late[:] = 0.0
         if np.any(self._late > TRACK_TIME):
             j = int(np.argmax(self._late)) + 5
             i = j - 1
