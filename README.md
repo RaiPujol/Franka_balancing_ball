@@ -44,6 +44,6 @@ The new deck is 233 mm square. Its 35 mm wide tab extends 21 mm past the deck. T
 
 ## Hardware files
 
-The `hardware/` directory contains stationary recording and offline analysis tools. The separate `torque_balance/` package has a Franka deployment script and its own simulation with a different mount and a 254 mm box. Its default simulation pose puts the revised CAD almost vertical. The results here apply to the outward-facing CAD model. We have not tested the revised print on hardware.
+The `hardware/` directory contains a transport-independent Kalman + LQR core, read-only robot-state preflight and calibration analysis. See [hardware setup](hardware/REAL_ROBOT_SETUP.md). The separate `torque_balance/` package contains a different experimental controller and FrankaPy motion scripts. It now models the 233 mm plate, but its mounting transform remains an estimate. The validated simulation results here apply to the outward-facing CAD model. The revised print and either controller have not been validated on the robot.
 
 See [asset provenance](THIRD_PARTY.md) for the original models and dependencies.

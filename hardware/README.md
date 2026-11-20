@@ -1,4 +1,6 @@
-# Franka read-only measurement and offline analysis
+# Franka measurement and controller preparation
+
+See [real robot setup](REAL_ROBOT_SETUP.md) for the new transport-independent Kalman + LQR core, read-only preflight, and measurements needed for the 162.5 g plate.
 
 These files collect and analyze stationary robot-state data. They contain no motion, gripper, controller-start, payload-setting, or collision-setting commands. They have only been tested with offline fake messages, not connected to the lab robot. They are **not** a ready-to-run balancing controller.
 
