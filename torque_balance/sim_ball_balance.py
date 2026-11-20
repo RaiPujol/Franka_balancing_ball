@@ -4,13 +4,17 @@ Uses the Lab 2 Panda model (torque actuators) and adds a 10 x 10 inch paddle on 
 hand plus a free golf ball. The arm is driven the way frankapy's dynamic joint skill
 drives the real one (joint impedance + gravity compensation, new joint targets at
 50 Hz), and the "torque sensor" is the link-side joint torque with noise added.
-It then runs the SAME procedures as the real robot script: tare, calibrate, locate,
+The paddle is mounted like the lab setup (gripper down, fingers on a side tab, see
+PADDLE_*_IN_EE in ball_core.py) and the arm sits in the lab home pose. It runs the SAME
+procedures as the real robot script, in the guide's order: track, grid, tare, fixedball,
 balance.
 
-    python sim_ball_balance.py                # full pipeline, no window
-    mjpython sim_ball_balance.py --view       # watch it (plain python on Linux)
-    python sim_ball_balance.py --noise 2      # double the sensor noise
-    python sim_ball_balance.py --ball-mass 0.16 --source wrench
+    python sim_ball_balance.py                          # full pipeline, both axes
+    python sim_ball_balance.py --rail x --axis x        # one axis, ball in a rail along x
+    mjpython sim_ball_balance.py --view                 # watch it (plain python on Linux)
+    python sim_ball_balance.py --noise 2                # double the sensor noise
+    python sim_ball_balance.py --ball-mass 0.16
+    python sim_ball_balance.py --stick-joint 6 --stick-at 20   # replay the Nov 17 fault
 """
 
 import argparse
@@ -33,12 +37,14 @@ MODEL_DIR = LAB2_DIR / "franka_emika_panda"
 ROOT_MODEL_XML = MODEL_DIR / "panda_torque_table.xml"
 SCENE_XML = HERE / "panda_paddle_ball.xml"
 
-# Level balance pose used in simulation: hand pointing forward, paddle flat.
-Q_BALANCE = np.array([0.0, -0.5, 0.0, -1.9, 0.0, 2.971, -0.785])
+# Balance pose: the lab home pose, gripper down, paddle level.
+Q_BALANCE = np.array(bc.HOME_POSE)
 
-# Assumed torque sensor noise, Nm (1 sigma per 1 kHz sample). Scaled by --noise.
-# Measure the real numbers with `franka_ball_balance.py log` and put them here.
-TAU_NOISE = np.array([0.03, 0.03, 0.03, 0.03, 0.01, 0.01, 0.01])
+# Torque noise per reading, Nm (1 sigma). Measured on the lab Franka on Nov 17 with
+# torque_watch (joints 1-7). Scaled by --noise. NOTE: the real arm also showed a further
+# 0.14-0.19 Nm of unexplained wrist torque while the paddle moved; the sim does not
+# reproduce that, so it is optimistic about everything that happens under motion.
+TAU_NOISE = np.array([0.0230, 0.0185, 0.0255, 0.0201, 0.0040, 0.0062, 0.0222])
 TAU_DRIFT = 0.3 * TAU_NOISE        # slow wander (thermal, friction), time constant 20 s
 DQ_NOISE = 1e-3                    # rad/s, joint velocity noise
 
@@ -47,7 +53,7 @@ PLATE_THICKNESS = 0.006
 PLATE_MASS = 0.25
 
 
-def build_scene(ball_mass, out_xml=SCENE_XML):
+def build_scene(ball_mass, rail="none", out_xml=SCENE_XML):
     """Lab 2 Panda + paddle welded to the hand + one free ball. Same ElementTree approach
     as Lab 2's build_scene."""
     tree = ET.parse(ROOT_MODEL_XML)
@@ -69,10 +75,22 @@ def build_scene(ball_mass, out_xml=SCENE_XML):
         "name": "plate", "type": "box", "size": f"{h} {h} {PLATE_THICKNESS / 2}",
         "pos": f"0 0 {-PLATE_THICKNESS / 2}", "mass": str(PLATE_MASS), "rgba": "0.85 0.65 0.35 1",
         "contype": "0", "conaffinity": "2", "condim": "6", "friction": "0.6 0.005 0.0002"})
+    # the small vertical tab the fingers pinch, at the paddle edge nearest the hand
     ET.SubElement(paddle, "geom", {
-        "name": "handle", "type": "box", "size": f"0.05 0.012 {PLATE_THICKNESS / 2}",
-        "pos": f"{-h - 0.05} 0 {-PLATE_THICKNESS / 2}", "mass": "0.03", "rgba": "0.3 0.3 0.3 1",
+        "name": "tab", "type": "box", "size": "0.004 0.02 0.015",
+        "pos": f"{-h + 0.004} 0 0.015", "mass": "0.02", "rgba": "0.3 0.3 0.3 1",
         "contype": "0", "conaffinity": "0"})
+    if rail in ("x", "y"):
+        # two strips that keep the ball on one line through the centre (pencils / rulers)
+        gap, wide, high = 0.015, 0.004, 0.006
+        for side in (-1, 1):
+            off = side * (gap + wide)
+            size = f"{h} {wide} {high}" if rail == "x" else f"{wide} {h} {high}"
+            pos = f"0 {off} {high}" if rail == "x" else f"{off} 0 {high}"
+            ET.SubElement(paddle, "geom", {
+                "name": f"rail{side}", "type": "box", "size": size, "pos": pos, "mass": "0.01",
+                "rgba": "0.2 0.4 0.8 1", "contype": "0", "conaffinity": "2", "condim": "3",
+                "friction": "0.3 0.005 0.0002"})
 
     world = root.find("worldbody")
     ball = ET.SubElement(world, "body", {"name": "ball", "pos": "2 0 0.5"})
@@ -92,8 +110,10 @@ class SimIO:
     """Same interface as FrankaIO in franka_ball_balance.py, backed by MuJoCo."""
 
     def __init__(self, rate_hz=50.0, noise=1.0, ball_mass=bc.GOLF_BALL_MASS, view=False,
-                 realtime=False, seed=0, verbose=True):
-        self.model = mj.MjModel.from_xml_path(str(build_scene(ball_mass)))
+                 realtime=False, seed=0, verbose=True, rail="none", stick_joint=None, stick_at=None):
+        self.model = mj.MjModel.from_xml_path(str(build_scene(ball_mass, rail)))
+        self.stick_joint = None if stick_joint is None else stick_joint - 1
+        self.stick_at, self.q_stuck = stick_at, None
         self.data = mj.MjData(self.model)
         self.dt_ctrl = 1.0 / rate_hz
         self.substeps = int(round(self.dt_ctrl / self.model.opt.timestep))
@@ -214,6 +234,12 @@ class SimIO:
         for _ in range(n):
             # 1 kHz joint impedance + gravity compensation, as in Lab 2's controller
             tau = bc.K_GAINS * (self.q_des - d.qpos[:7]) - bc.D_GAINS * d.qvel[:7]
+            if self.stick_joint is not None and d.time > self.stick_at:
+                # fault injection: the joint stops moving, whatever its target does
+                j = self.stick_joint
+                if self.q_stuck is None:
+                    self.q_stuck = d.qpos[j]
+                tau[j] = 3000.0 * (self.q_stuck - d.qpos[j]) - 100.0 * d.qvel[j]
             d.ctrl[:7] = tau + d.qfrc_bias[:7]
             d.ctrl[7] = 0.005
             mj.mj_step(m, d)
@@ -230,42 +256,60 @@ class SimIO:
 def main():
     ap = argparse.ArgumentParser(description="Simulated torque-only ball balancing.")
     ap.add_argument("--view", action="store_true", help="Open the MuJoCo viewer (mjpython on macOS).")
-    ap.add_argument("--noise", type=float, default=1.0, help="Scale on the assumed torque sensor noise.")
+    ap.add_argument("--noise", type=float, default=1.0, help="Scale on the measured torque noise.")
     ap.add_argument("--ball-mass", type=float, default=bc.GOLF_BALL_MASS, help="kg. Golf ball = 0.0459.")
     ap.add_argument("--source", choices=["tau", "wrench"], default="tau")
     ap.add_argument("--rate", type=float, default=50.0)
     ap.add_argument("--seconds", type=float, default=30.0, help="Length of the balance run.")
     ap.add_argument("--start", type=float, nargs=2, default=[0.05, -0.04], help="Ball start, paddle x y in m.")
     ap.add_argument("--gain", type=float, default=0.6, help="Tilt per metre of ball error [rad/m].")
+    ap.add_argument("--rail", choices=["none", "x", "y"], default="none", help="Strips that keep the ball on a line.")
+    ap.add_argument("--axis", choices=["both", "x", "y"], default="both", help="Which ball axis balance controls.")
+    ap.add_argument("--stages", default="track,grid,tare,fixedball,balance")
+    ap.add_argument("--stick-joint", type=int, default=None, help="Fault injection: joint number that freezes.")
+    ap.add_argument("--stick-at", type=float, default=20.0, help="Sim time [s] at which it freezes.")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
     io = SimIO(rate_hz=args.rate, noise=args.noise, ball_mass=args.ball_mass, view=args.view,
-               realtime=args.view, seed=args.seed)
-    calib = bc.Calib(Q_BALANCE, source=args.source, rate_hz=args.rate,
-                     k=args.ball_mass * bc.G)
-
-    print("\n=== 1. tare (no ball) ===")
-    bc.run_tare(io, calib)
-    print("\n=== 2. calibrate (ball at centre, then +8 cm) ===")
-    bc.run_calibrate(io, calib)
-    print("\n=== 3. locate (still paddle, ball placed at known spots) ===")
-    spots = [(0.0, 0.0), (0.08, 0.0), (-0.08, 0.0), (0.0, 0.08), (0.0, -0.08), (0.06, 0.06), (-0.10, -0.05)]
-    est = bc.run_locate(io, calib, spots=spots)
-    for s, e in zip(spots, est):
-        print(f"  true ({s[0] * 100:+5.1f}, {s[1] * 100:+5.1f}) cm   estimated ({e[0] * 100:+5.1f}, {e[1] * 100:+5.1f}) cm")
-    print(f"  rms error {np.sqrt(np.mean(np.sum((est - np.array(spots)) ** 2, axis=1))) * 100:.2f} cm")
-
-    print("\n=== 4. balance ===")
-    log = bc.run_balance(io, calib, seconds=args.seconds, start=args.start, gain=args.gain,
-                         log_name=str(HERE / "logs" / "sim_balance.npz"))
-    if "truth" in log:
-        r = np.linalg.norm(log["truth"], axis=1) * 100
-        fell = r.max() > bc.PLATE_HALF * 100 * np.sqrt(2)
-        tail = r[len(r) // 2:]
-        print(f"\nTRUE ball position: {'FELL OFF' if fell else 'stayed on'} the paddle. "
-              f"distance from centre: start {r[0]:.1f} cm, max {r.max():.1f} cm, "
-              f"rms over the second half {np.sqrt(np.mean(tail ** 2)):.1f} cm")
+               realtime=args.view, seed=args.seed, rail=args.rail,
+               stick_joint=args.stick_joint, stick_at=args.stick_at)
+    calib = bc.Calib(Q_BALANCE, source=args.source, rate_hz=args.rate, k=args.ball_mass * bc.G)
+    axis = None if args.axis == "both" else args.axis
+    stages = args.stages.split(",")
+    logs = HERE / "logs"
+    try:
+        if "track" in stages:
+            print("\n=== track: does each tilt axis follow? (no ball) ===")
+            bc.run_track(io, calib, log_name=str(logs / "sim_track.npz"))
+        if "grid" in stages:
+            print("\n=== grid: ball held at marks, paddle still ===")
+            bc.run_grid(io, calib, log_name=str(logs / "sim_grid.npz"))
+        if "tare" in stages:
+            print("\n=== tare: paddle rocks, no ball ===")
+            bc.run_tare(io, calib, log_name=str(logs / "sim_tare.npz"))
+        if "fixedball" in stages:
+            print("\n=== fixedball: ball stuck at a mark, paddle rocks ===")
+            bc.run_fixedball(io, calib, spot=(0.04, 0.0) if axis != "y" else (0.0, 0.04),
+                             log_name=str(logs / "sim_fixedball.npz"))
+        if "balance" in stages:
+            print(f"\n=== balance ({'both axes' if axis is None else 'axis ' + axis + ', rail ' + args.rail}) ===")
+            start = tuple(args.start)
+            if axis == "x":
+                start = (start[0], 0.0)
+            elif axis == "y":
+                start = (0.0, start[1])
+            log = bc.run_balance(io, calib, seconds=args.seconds, start=start, gain=args.gain,
+                                 axis=axis, log_name=str(logs / "sim_balance.npz"))
+            if "truth" in log and len(log["truth"]):
+                r = np.linalg.norm(log["truth"], axis=1) * 100
+                fell = io.ball_fell() or r.max() > bc.PLATE_HALF * 100 * np.sqrt(2)
+                tail = r[len(r) // 2:]
+                print(f"\nTRUE ball position: {'FELL OFF' if fell else 'stayed on'} the paddle. "
+                      f"distance from centre: start {r[0]:.1f} cm, max {r.max():.1f} cm, "
+                      f"rms over the second half {np.sqrt(np.mean(tail ** 2)):.1f} cm")
+    except bc.SafetyStop as e:
+        print(f"STOPPED: {e}")
     if io.viewer is not None:
         io.viewer.close()
 

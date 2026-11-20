@@ -47,15 +47,25 @@ D_GAINS = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0])
 # Paddle mounting. EDIT THESE TWO to match how the paddle sits in the gripper.
 # --------------------------------------------------------------------------------------
 # Centre of the paddle's top face, in the EE frame (metres).
-# Default: handle held in the fingers, paddle sticking straight out along the hand's
-# z axis, centre 16.7 cm past the fingertips.
-PADDLE_CENTER_IN_EE = (0.0, 0.0, 0.167)
-# Paddle x, y, z axes written in EE coordinates (rows). z is the top-face normal.
-# Default: paddle x = hand z (pointing away from the wrist), paddle normal = hand y
-# (the finger closing direction, i.e. the fingers pinch a flat handle).
-PADDLE_AXES_IN_EE = ((0.0, 0.0, 1.0),
-                     (1.0, 0.0, 0.0),
-                     (0.0, 1.0, 0.0))
+# Default = the lab setup: gripper pointing straight DOWN, the fingers pinch a small vertical
+# tab at one edge of the paddle, the paddle lies flat 2 cm below the fingertips and sticks
+# out 13 cm (to its centre) along the hand's x axis. set_mounting.py rewrites these.
+PADDLE_CENTER_IN_EE = (0.1300, 0.0, 0.0200)
+# Paddle x, y, z axes written in EE coordinates (rows). z is the top-face normal (up).
+# Paddle x = hand x (out from the fingers to the far edge), normal = -hand z (hand points down).
+PADDLE_AXES_IN_EE = ((1.0, 0.0, 0.0),
+                     (0.0, -1.0, 0.0),
+                     (0.0, 0.0, -1.0))
+
+# Recommended balance pose: the lab's home pose (reset_joints.py). Gripper straight down,
+# joint 5 and joint 6 axes both horizontal: joint 6 tilts the paddle forward/back (ball
+# rolls along base x), joint 5 tilts it left/right (ball rolls along base y), joint 7 only
+# spins it. Each wrist joint does one job, and both see the ball at full sensitivity.
+HOME_POSE = (0.0, -0.785398, 0.0, -2.356194, 0.0, 1.570796, 0.785398)
+
+# Tracking watchdog: stop if a wrist joint is this far from its target for this long.
+TRACK_TOL = np.radians(1.5)
+TRACK_TIME = 0.5
 
 
 def paddle_transform(center=PADDLE_CENTER_IN_EE, axes=PADDLE_AXES_IN_EE):
@@ -376,6 +386,7 @@ class Session:
         self.servo = TiltServo(calib.q0, calib.T_ee_paddle, self.dt, calib.tilt_max, lead=D_GAINS / K_GAINS)
         self._vel = []
         self._vz = None
+        self._late = np.zeros(3)
         self.accel_z = 0.0
         self.sensor = BallSensor(calib.source, calib.T_ee_paddle)
         self.tare = None
@@ -406,6 +417,7 @@ class Session:
         self.io.goto(self.calib.q0, 4.0)
         self.servo.reset()
         self._vel, self._vz = [], None
+        self._late = np.zeros(3)
         self.io.start_stream(self.calib.q0)
 
     def stop(self):
@@ -433,6 +445,16 @@ class Session:
         y = self.sensor.raw(state)
         if np.max(np.abs(q - self.servo.q)) > 0.12:
             raise SafetyStop("arm is not following the command (blocked or pushed?)")
+        # watchdog: a wrist joint that stays off its target. On Nov 17 joint 6 stopped
+        # following 15 s into every tare run while its target kept moving.
+        err = np.abs(q[4:7] - self.servo.q[4:7])
+        self._late = np.where(err > TRACK_TOL, self._late + self.dt, 0.0)
+        if np.any(self._late > TRACK_TIME):
+            j = int(np.argmax(self._late)) + 5
+            raise SafetyStop(
+                f"joint {j} is not following its target: {np.degrees(err[j - 5]):.1f} deg off for "
+                f"{TRACK_TIME:.1f} s. Something blocks it (paddle touching, cable) or the joint "
+                "faulted. Check the paddle clearance and Desk, then run the track step.")
         tilt = self.servo.measured_tilt(q)
         q_des = self.servo.step(tilt_target, tilt)
         if np.max(np.abs(q_des - self.calib.q0)) > 0.35 or np.any(q_des < JOINT_MIN + 0.02) \
@@ -517,6 +539,28 @@ def run_log(io, seconds, rate_hz, out_csv, calib=None):
     return rows
 
 
+class Excitation:
+    """The rocking motion used by tare and fixedball: slow sines mixed with small random
+    steps, like what the balance controller produces. Ramps in and out over 3 s."""
+
+    def __init__(self, amp, seconds, seed=0):
+        self.amp, self.seconds = amp, seconds
+        self.rng = np.random.default_rng(seed)
+        self.step = np.zeros(2)
+
+    def __call__(self, i, dt):
+        t = i * dt
+        ramp = min(1.0, t / 3.0, max(0.0, (self.seconds - t) / 3.0))
+        sine = np.array([
+            0.5 * np.sin(2 * np.pi * 0.13 * t) + 0.3 * np.sin(2 * np.pi * 0.41 * t + 1.0)
+            + 0.2 * np.sin(2 * np.pi * 0.97 * t + 2.0),
+            0.5 * np.sin(2 * np.pi * 0.17 * t + 0.5) + 0.3 * np.sin(2 * np.pi * 0.53 * t + 2.0)
+            + 0.2 * np.sin(2 * np.pi * 1.13 * t)])
+        if i % max(int(0.3 / dt), 1) == 0:
+            self.step = self.rng.uniform(-1.0, 1.0, 2)
+        return self.amp * ramp * (0.5 * sine + 0.5 * self.step)
+
+
 def run_tare(io, calib, seconds=60.0, log_name=None):
     """Step 2: rock the paddle with NO ball and fit the no-ball torque model.
     The motion mixes slow sines with small random steps so the model sees the same kind
@@ -526,23 +570,12 @@ def run_tare(io, calib, seconds=60.0, log_name=None):
     try:
         io.ask("TARE: REMOVE the ball, hands off the arm. The paddle will rock for "
                f"{seconds:.0f} s. Press Enter: ", ball=None)
-        amp = 0.8 * calib.tilt_max
-        rng = np.random.default_rng(0)
-        step = np.zeros(2)
+        exc = Excitation(0.8 * calib.tilt_max, seconds)
         Phi, Y = [], []
         n = int(seconds / ses.dt)
         for i in range(n + int(2.0 / ses.dt)):
             t = i * ses.dt
-            ramp = min(1.0, t / 3.0, max(0.0, (seconds - t) / 3.0))
-            sine = np.array([
-                0.5 * np.sin(2 * np.pi * 0.13 * t) + 0.3 * np.sin(2 * np.pi * 0.41 * t + 1.0)
-                + 0.2 * np.sin(2 * np.pi * 0.97 * t + 2.0),
-                0.5 * np.sin(2 * np.pi * 0.17 * t + 0.5) + 0.3 * np.sin(2 * np.pi * 0.53 * t + 2.0)
-                + 0.2 * np.sin(2 * np.pi * 1.13 * t)])
-            if i % int(0.3 / ses.dt) == 0:
-                step = rng.uniform(-1.0, 1.0, 2)
-            target = amp * ramp * (0.5 * sine + 0.5 * step)
-            _, phi, y = ses.cycle(target if i < n else [0.0, 0.0])
+            _, phi, y = ses.cycle(exc(i, ses.dt) if i < n else [0.0, 0.0])
             if t > 1.0:
                 Phi.append(phi)
                 Y.append(y)
@@ -633,6 +666,172 @@ def run_locate(io, calib, spots=None, seconds=30.0, log_name=None):
     return np.array(out)
 
 
+
+AXIS_NAMES = ("tilt about base x (ball rolls along y, left-right; joint 5 at the home pose)",
+              "tilt about base y (ball rolls along x, toward/away from the robot; joint 6)")
+
+
+def run_track(io, calib, seconds=15.0, amp_deg=2.0, log_name=None):
+    """Stage 5: does each tilt axis follow its command? No ball. Each axis moves alone.
+    Nov 17 failed here without anyone noticing: joint 6 stopped following after 15 s."""
+    ses = Session(io, calib, log_name)
+    amp = np.radians(amp_deg)
+    out, verdicts = {}, []
+    ses.start()
+    try:
+        io.ask(f"TRACK TEST: no ball. Each tilt axis rocks alone for {seconds:.0f} s "
+               f"(max {amp_deg:.0f} deg). Hands off, press Enter: ", ball=None)
+        for ax in (1, 0):
+            cmd, meas, other, qs = [], [], [], []
+            n = int(seconds / ses.dt)
+            for i in range(n + int(1.5 / ses.dt)):
+                t = i * ses.dt
+                ramp = min(1.0, t / 2.0, max(0.0, (seconds - t) / 2.0))
+                target = np.zeros(2)
+                if i < n:
+                    target[ax] = amp * ramp * (0.6 * np.sin(2 * np.pi * 0.2 * t)
+                                               + 0.4 * np.sin(2 * np.pi * 0.6 * t + 1.0))
+                state, _, _ = ses.cycle(target)
+                tilt = ses.servo.measured_tilt(state["q"])
+                if 1.0 < t < seconds - 1.0:
+                    cmd.append(ses.servo.cmd[ax])
+                    meas.append(tilt[ax])
+                    other.append(tilt[1 - ax])
+                    qs.append(state["q"])
+            out[ax] = (np.array(cmd), np.array(meas), np.array(other), np.array(qs))
+    except SafetyStop as e:
+        print(f"\nTRACK TEST FAILED: {e}")
+        verdicts.append(False)
+    finally:
+        ses.stop()
+
+    for ax in (1, 0):
+        if ax not in out:
+            continue
+        c, m, o, qs = out[ax]
+        best = max(range(0, 16), key=lambda k: np.corrcoef(c[:len(c) - k], m[k:])[0, 1])
+        corr = float(np.corrcoef(c[:len(c) - best], m[best:])[0, 1])
+        gain = float(np.polyfit(c[:len(c) - best], m[best:], 1)[0])
+        lag = best * ses.dt
+        moved = np.degrees(np.ptp(qs[:, 4:7], axis=0))
+        cross = np.degrees(np.std(o))
+        ok = 0.8 <= gain <= 1.2 and corr > 0.95 and lag <= 0.15 and cross < 0.5
+        verdicts.append(ok)
+        print(f"\naxis {'B' if ax else 'A'}: {AXIS_NAMES[ax]}")
+        print(f"  follows the command: gain {gain:.2f} (want 0.8-1.2), correlation {corr:.3f} "
+              f"(want > 0.95), lag {lag:.2f} s (want < 0.15)")
+        print(f"  other axis wobble {cross:.2f} deg rms (want < 0.5);  joints 5, 6, 7 moved "
+              f"{moved[0]:.1f}, {moved[1]:.1f}, {moved[2]:.1f} deg")
+        print("  => " + ("PASS" if ok else "FAIL: do not tare or balance until this passes"))
+    return all(verdicts) and len(out) == 2
+
+
+def run_grid(io, calib, points=None, seconds=3.0, log_name=None):
+    """Stage 4: ball held still at marked points on a still, level paddle. No tare needed.
+    Fits the ball weight k and the centre offset, reports the error at every mark, and
+    checks drift by measuring the empty paddle again at the end."""
+    points = points or [(0.0, 0.0), (0.06, 0.0), (-0.06, 0.0), (0.0, 0.06), (0.0, -0.06)]
+    ses = Session(io, calib, log_name)
+    ses.tare = None                            # static test: compare against the empty paddle
+    ses.start()
+    meas = []
+    try:
+        io.ask("GRID: REMOVE the ball, hands off, press Enter to measure the empty paddle: ", ball=None)
+        y0, s0, _ = ses.hold(seconds)
+        for p in points:
+            io.ask(f"Ball ON THE MARK at paddle x {p[0] * 100:+.0f} cm, y {p[1] * 100:+.0f} cm "
+                   "(putty or a washer under it), hands off, press Enter: ", ball=tuple(p), hold=True)
+            d, _, qm = ses.hold(seconds)
+            meas.append((np.asarray(p, dtype=float), d - y0, qm))
+        io.ask("REMOVE the ball again, hands off, press Enter (drift check): ", ball=None)
+        y1, _, q1 = ses.hold(seconds)
+    finally:
+        ses.stop()
+
+    sigma = np.maximum(s0, 1e-4)
+    w = 1.0 / sigma
+    rows, rhs = [], []
+    for p, dy, qm in meas:
+        c, A, _ = ses.sensor.model(qm)
+        rows.append(np.c_[c + A @ ses.to_base(p), A] * w[:, None])
+        rhs.append(dy * w)
+    sol, *_ = np.linalg.lstsq(np.vstack(rows), np.concatenate(rhs), rcond=None)
+    k = float(sol[0])
+    nominal = calib.k
+    print(f"\nfitted ball weight k = {k:+.3f} N (expected {nominal:.3f} N; mass by torque "
+          f"{abs(k) / G * 1000:.0f} g)")
+    if abs(k) < 0.3 * abs(nominal):
+        raise SafetyStop("the ball's torque signature was not found (k is tiny). Check the marks, "
+                         "set_mounting.py, and the noise numbers from watch.")
+    off = sol[1:] / k
+    errs = []
+    print("  mark [cm]          estimated [cm]      error [cm]")
+    for p, dy, qm in meas:
+        xy, _ = ses.sensor.locate(qm, dy, k, sigma)
+        e = ses.to_paddle(xy - off)
+        errs.append(e - p)
+        print(f"  ({p[0] * 100:+5.1f}, {p[1] * 100:+5.1f})     ({e[0] * 100:+5.1f}, {e[1] * 100:+5.1f})"
+              f"      {np.linalg.norm(e - p) * 100:4.1f}")
+    rms = float(np.sqrt(np.mean(np.sum(np.square(errs), axis=1)))) * 100
+    c, A, _ = ses.sensor.model(q1)
+    Hinv = np.linalg.inv(A.T @ (A / np.square(sigma)[:, None]))
+    drift_xy = Hinv @ (A.T @ ((y1 - y0) / k / np.square(sigma)))
+    drift = float(np.linalg.norm(drift_xy)) * 100
+    ok = rms < 2.0 and drift < 1.0
+    print(f"  rms error {rms:.1f} cm (want < 2);  drift over the test = {drift:.1f} cm of "
+          "apparent ball motion (want < 1)")
+    print("  => " + ("PASS" if ok else "FAIL" if rms > 4.0 or drift > 2.0 else "MARGINAL"))
+    calib.k, calib.center_offset = k, off
+    return ok
+
+
+def run_fixedball(io, calib, seconds=30.0, spot=(0.0, 0.0), log_name=None):
+    """Stage 7: the key test. Ball FIXED with putty at a known mark while the paddle rocks
+    like during tare. The estimate should stay on the mark. Tests the whole sensing chain
+    under motion with a known answer, before any controller is involved."""
+    ses = Session(io, calib, log_name)
+    kfx, kfy = AxisKF(ses.dt), AxisKF(ses.dt)
+    spot = np.asarray(spot, dtype=float)
+    ses.start()
+    raw, filt = [], []
+    try:
+        ses.rezero()
+        io.ask(f"FIXED BALL: stick the ball with putty ON THE MARK at paddle x {spot[0] * 100:+.0f} cm, "
+               f"y {spot[1] * 100:+.0f} cm. Hands off, press Enter. The paddle rocks for {seconds:.0f} s: ",
+               ball=tuple(spot), hold=True)
+        truth = ses.to_base(spot)
+        kfx.reset(0.0, 0.05)
+        kfy.reset(0.0, 0.05)
+        exc = Excitation(0.8 * calib.tilt_max, seconds, seed=1)
+        n = int(seconds / ses.dt)
+        for i in range(n + int(1.0 / ses.dt)):
+            state, phi, y = ses.cycle(exc(i, ses.dt) if i < n else [0.0, 0.0])
+            q = np.asarray(state["q"], dtype=float)
+            dy = y - ses.tare.predict(phi)
+            z, cov = ses.sensor.locate(q, dy, calib.k, ses.tare.sigma, ses.accel_z, (0.0, 0.0))
+            z = z - calib.center_offset
+            xe = kfx.step(0.0, z[0], cov[0, 0])[0]
+            ye = kfy.step(0.0, z[1], cov[1, 1])[0]
+            ses._rec(z=z, est=[xe, ye], fixed_at=truth)
+            if 3.0 < i * ses.dt < seconds - 1.0:
+                raw.append(z - truth)
+                filt.append(np.array([xe, ye]) - truth)
+    finally:
+        ses.stop()
+    raw, filt = np.array(raw) * 100, np.array(filt) * 100
+    print("\nestimate error with the ball fixed, paddle moving [cm]:     along x    along y")
+    print(f"  single sample, rms                                     {np.sqrt(np.mean(raw[:, 0] ** 2)):7.1f}"
+          f"    {np.sqrt(np.mean(raw[:, 1] ** 2)):7.1f}")
+    print(f"  filtered (what the controller sees), rms               {np.sqrt(np.mean(filt[:, 0] ** 2)):7.1f}"
+          f"    {np.sqrt(np.mean(filt[:, 1] ** 2)):7.1f}")
+    print(f"  filtered, worst                                        {np.abs(filt[:, 0]).max():7.1f}"
+          f"    {np.abs(filt[:, 1]).max():7.1f}")
+    worst = float(np.sqrt(np.mean(filt ** 2, axis=0)).max())
+    verdict = "PASS" if worst < 2.0 else "MARGINAL" if worst < 4.0 else "FAIL"
+    print(f"  => {verdict} (want filtered rms < 2 cm; over 4 cm the controller would chase noise)")
+    return worst
+
+
 def lqr_gain(dt, wc, gain):
     """Discrete LQR for one axis. State [ball position, ball velocity, tilt, tilt rate],
     input = tilt target. The tilt follows its target through the servo's second-order
@@ -660,8 +859,11 @@ def lqr_gain(dt, wc, gain):
 
 
 def run_balance(io, calib, seconds=30.0, gain=0.6, start=(0.03, 0.0), rezero=True,
-                log_name=None, quiet=False):
-    """Step 5: closed loop. Torques -> ball position -> Kalman filter -> LQR -> paddle tilt."""
+                log_name=None, quiet=False, axis=None):
+    """Closed loop. Torques -> ball position -> Kalman filter -> LQR -> paddle tilt.
+    axis None: both axes. axis "x": only the ball's motion along base x is controlled
+    (joint 6), the paddle is held level the other way; use with a rail that keeps the ball
+    on that line. axis "y": the same along base y (joint 5)."""
     ses = Session(io, calib, log_name)
     K = lqr_gain(ses.dt, ses.servo.wc, gain)
     kfx, kfy = AxisKF(ses.dt), AxisKF(ses.dt)
@@ -670,7 +872,8 @@ def run_balance(io, calib, seconds=30.0, gain=0.6, start=(0.03, 0.0), rezero=Tru
     try:
         if rezero:
             ses.rezero()
-        io.ask("Put the ball near the CENTRE of the paddle, let go, press Enter: ", ball=tuple(start))
+        where = "IN THE RAIL near the centre" if axis else "near the CENTRE of the paddle"
+        io.ask(f"Put the ball {where}, let go, press Enter: ", ball=tuple(start))
         d, _, q = ses.hold(0.4, settle=0.2)
         xy, _ = ses.sensor.locate(q, d, calib.k, ses.tare.sigma)
         xy = xy - calib.center_offset
@@ -698,9 +901,14 @@ def run_balance(io, calib, seconds=30.0, gain=0.6, start=(0.03, 0.0), rezero=Tru
             bias_x, bias_y = x[2] / ROLL_ACCEL, yv[2] / ROLL_ACCEL      # tilt that cancels the disturbance
             b_target = -K @ np.array([x[0], x[1], b_cmd + bias_x, db_cmd]) - bias_x
             a_target = K @ np.array([yv[0], yv[1], -a_cmd + bias_y, -da_cmd]) + bias_y
+            if axis == "x":
+                a_target = 0.0
+            elif axis == "y":
+                b_target = 0.0
             target = np.array([a_target, b_target])
             ses._rec(z=z)
-            lost = lost + 1 if max(abs(x[0]), abs(yv[0])) > PLATE_HALF + 0.03 else 0
+            watched = [x[0]] if axis == "x" else [yv[0]] if axis == "y" else [x[0], yv[0]]
+            lost = lost + 1 if max(abs(v) for v in watched) > PLATE_HALF + 0.03 else 0
             if lost > int(0.5 / ses.dt):
                 raise SafetyStop("ball estimate left the paddle")
             if not quiet and i % int(1.0 / ses.dt) == 0:
@@ -711,4 +919,14 @@ def run_balance(io, calib, seconds=30.0, gain=0.6, start=(0.03, 0.0), rezero=Tru
         print(f"STOP: {e}. Levelling the paddle.")
     finally:
         ses.stop()
-    return {k: np.array(v) for k, v in ses.log.items()}
+    log = {k: np.array(v) for k, v in ses.log.items()}
+    if "est" in log and len(log["est"]) > 10:
+        e = log["est"][:, [0, 3]] * 100
+        t = len(e) * ses.dt
+        print(f"\nran {t:.1f} s. Ball estimate [cm]: along x rms {np.sqrt(np.mean(e[:, 0] ** 2)):.1f}, "
+              f"along y rms {np.sqrt(np.mean(e[:, 1] ** 2)):.1f}")
+        if axis:
+            cross = e[:, 1] if axis == "x" else e[:, 0]
+            print(f"  across the rail the estimate should stay near 0: rms {np.sqrt(np.mean(cross ** 2)):.1f} cm "
+                  "(that is pure sensing error, a free check)")
+    return log

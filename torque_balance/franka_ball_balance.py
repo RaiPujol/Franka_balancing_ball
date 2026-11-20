@@ -4,16 +4,17 @@ Runs on the robot PC inside the lab docker container (same setup as Lab 3's
 real_robot.py): control PC server up, a partner with a hand on the e-stop.
 Needs only numpy + frankapy, and ball_core.py next to this file.
 
-Run the steps in this order (each one saves into calib.json):
+Run the stages in this order. Each prints PASS / MARGINAL / FAIL; do not go on past a FAIL.
+Full instructions: GUIDE.pdf.
 
-    python3 franka_ball_balance.py grip                 # close the fingers on the paddle handle
-    python3 franka_ball_balance.py teach --seconds 30   # guide the paddle to level, in free space
-    python3 franka_ball_balance.py watch                # LIVE torque change per joint while you press on the paddle
-    python3 franka_ball_balance.py log --seconds 10     # MEASURE: joint angles + torques -> csv, noise floor
-    python3 franka_ball_balance.py tare                 # no ball: paddle rocks 60 s, learns the no-ball torques
-    python3 franka_ball_balance.py calibrate            # ball at centre, then +8 cm: prints the torque change
-    python3 franka_ball_balance.py locate               # live ball position on a still paddle (check with a ruler)
-    python3 franka_ball_balance.py balance --seconds 30 # closed loop
+    python3 franka_ball_balance.py home                 # MOVES: arm to the balance pose, saves calib.json
+    python3 franka_ball_balance.py watch                # live torque change per joint (no motion)
+    python3 franka_ball_balance.py grid                 # ball held at 5 marks, paddle still: k + accuracy
+    python3 franka_ball_balance.py track                # MOVES: does each tilt axis follow? no ball
+    python3 franka_ball_balance.py tare                 # MOVES: no ball, learns the paddle's own torques
+    python3 franka_ball_balance.py fixedball            # MOVES: ball stuck with putty, does the estimate stay put?
+    python3 franka_ball_balance.py balance --axis x     # MOVES: one axis, ball in a rail along x
+    python3 franka_ball_balance.py balance              # MOVES: both axes
 
 Ctrl-C at any time cancels the running skill and the arm holds position.
 """
@@ -209,9 +210,29 @@ def _sample(io):
     return tau
 
 
+def home(io, path, args):
+    """Move to the recommended balance pose (lab home) and save it as the balance pose."""
+    print("Moving to the balance pose (the lab home pose). Partner on the e-stop.")
+    input("Enter to move: ")
+    io.goto(np.array(bc.HOME_POSE), 5.0)
+    io.wait(1.0)
+    q0 = io.fa.get_joints()
+    calib = bc.Calib(q0, source=args.source, rate_hz=args.rate, tilt_max=np.radians(args.tilt_max),
+                     k=args.ball_mass * bc.G)
+    T, _ = bc.fk(q0, calib.T_ee_paddle)
+    off = np.degrees(np.arccos(np.clip(T[2, 2], -1, 1)))
+    print(f"paddle normal is {off:.1f} deg from vertical by the kinematic model "
+          f"(PASS under 5; check with a phone level too). Paddle centre at {np.round(T[:3, 3], 3)} m.")
+    if off > 5:
+        print("FAIL: the mounting constants do not match. Run set_mounting.py, then home again.")
+    calib.save(path)
+    print(f"saved to {path}. Next: watch, then grid.")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Torque-only ball balancing on the Franka.")
-    ap.add_argument("step", choices=["grip", "release", "teach", "watch", "log", "tare", "calibrate", "locate", "balance"])
+    ap.add_argument("step", choices=["grip", "release", "home", "teach", "watch", "log", "grid", "track",
+                                     "tare", "fixedball", "calibrate", "locate", "balance"])
     ap.add_argument("--calib", default=os.path.join(HERE, "calib.json"))
     ap.add_argument("--seconds", type=float, default=None, help="Duration of the step.")
     ap.add_argument("--rate", type=float, default=50.0, help="Loop rate in Hz (teach). Robot state updates at 100 Hz.")
@@ -222,10 +243,14 @@ def main():
     ap.add_argument("--gain", type=float, default=0.6, help="balance: tilt per metre of ball error [rad/m].")
     ap.add_argument("--no-rezero", action="store_true", help="balance: skip the no-ball zeroing.")
     ap.add_argument("--out", default=None, help="log: csv file name.")
+    ap.add_argument("--axis", choices=["both", "x", "y"], default="both",
+                    help="balance: x = only along x (rail along x, joint 6), y = only along y (joint 5).")
+    ap.add_argument("--spot", type=float, nargs=2, default=[0.0, 0.0],
+                    help="fixedball: where the ball is stuck, paddle x y in cm.")
     args = ap.parse_args()
 
     calib = bc.Calib.load(args.calib) if os.path.exists(args.calib) else None
-    rate = calib.rate_hz if calib and args.step not in ("teach", "log", "watch") else args.rate
+    rate = calib.rate_hz if calib and args.step not in ("teach", "home", "log", "watch") else args.rate
     io = FrankaIO(rate)
     stamp = time.strftime("%m%d_%H%M%S")
     log_name = os.path.join(HERE, "logs", f"{args.step}_{stamp}.npz")
@@ -239,6 +264,12 @@ def main():
     if args.step == "teach":
         teach(io, args.calib, args.seconds or 30.0, args)
         return
+    if args.step == "home":
+        try:
+            home(io, args.calib, args)
+        except ValueError as e:
+            print(f"frankapy refused the motion: {e}")
+        return
     if args.step == "watch":
         watch(io, args.seconds or 300.0, args.rate)
         return
@@ -250,11 +281,19 @@ def main():
         return
     if calib is None:
         ap.error("no calib.json yet: run the teach step first")
-    if args.step != "tare" and calib.tare_W is None:
+    if args.step not in ("tare", "grid", "track") and calib.tare_W is None:
         ap.error("run the tare step first")
 
     try:
-        if args.step == "tare":
+        if args.step == "grid":
+            bc.run_grid(io, calib, log_name=log_name)
+            calib.save(args.calib)
+        elif args.step == "track":
+            bc.run_track(io, calib, log_name=log_name)
+        elif args.step == "fixedball":
+            bc.run_fixedball(io, calib, seconds=args.seconds or 30.0,
+                             spot=(args.spot[0] / 100.0, args.spot[1] / 100.0), log_name=log_name)
+        elif args.step == "tare":
             bc.run_tare(io, calib, args.seconds or 60.0, log_name)
             calib.save(args.calib)
         elif args.step == "calibrate":
@@ -264,7 +303,8 @@ def main():
             bc.run_locate(io, calib, seconds=args.seconds or 30.0, log_name=log_name)
         elif args.step == "balance":
             bc.run_balance(io, calib, seconds=args.seconds or 30.0, gain=args.gain,
-                           rezero=not args.no_rezero, log_name=log_name)
+                           rezero=not args.no_rezero, log_name=log_name,
+                           axis=None if args.axis == "both" else args.axis)
     except bc.SafetyStop as e:
         print(f"STOPPED: {e}")
     except ValueError as e:
