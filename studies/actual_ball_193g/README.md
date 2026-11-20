@@ -35,3 +35,5 @@ python studies/actual_ball_193g/render_videos.py
 The first command writes the 200 original-reference cases, 200 gravity-reference cases and 140 challenge cases to `output/actual_ball_193g/`. The second writes five MP4s to `output/actual_ball_193g/videos/`. Pass `--publish-dir "/path/to/video folder"` to copy the verified MP4s to another location. The videos use gravity-referenced MPC/PD, delay 50 ms, seed 401 and the starting offset (+18, −12) mm. The simulator checks the actual ball diameter, mass and inertia in both the plant and the unloaded observer. The original golf-ball presets remain available through their existing commands.
 
 [Original trials](results/original.csv) · [Gravity-referenced trials](results/gravity.csv) · [Additional starts and MPC sensitivity](results/challenge.csv) · [Grouped results](results/summary.json) · [Video scores](results/video_index.csv) · [Simulation source hashes](results/source_hashes.json)
+
+For six additional initial positions and a higher assumed noise level, see [held-out robustness](HELDOUT.md).

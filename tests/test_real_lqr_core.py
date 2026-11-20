@@ -7,7 +7,7 @@ from hardware.real_lqr_core import BallLQRCore, ControllerFault
 
 def core():
     return BallLQRCore(max_tilt_rad=.03, max_age_s=.08, min_normal_n=.2,
-                       edge_margin_m=.01)
+                       edge_margin_m=.01, ball_radius_m=.03725)
 
 
 class RealLQRCoreTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class RealLQRCoreTests(unittest.TestCase):
         result = ctl.update([.01, -.005], .45, sample_time_s=1., now_s=1.)
         np.testing.assert_allclose(result['slope_xy_rad'], [.006, -.003])
         ctl = core()
-        result = ctl.update([.07, 0], .45, sample_time_s=1., now_s=1.)
+        result = ctl.update([.06, 0], .45, sample_time_s=1., now_s=1.)
         self.assertAlmostEqual(np.linalg.norm(result['slope_xy_rad']), .03)
 
     def test_feedforward_sign_matches_tray_model(self):
@@ -33,6 +33,15 @@ class RealLQRCoreTests(unittest.TestCase):
                 ctl.update(args[0], args[1], sample_time_s=args[2], now_s=args[3])
             with self.assertRaises(ControllerFault):
                 ctl.update([0., 0.], .45, sample_time_s=2., now_s=2.)
+
+    def test_actual_ball_edge_and_explicit_radius(self):
+        with self.assertRaises(TypeError):
+            BallLQRCore(max_tilt_rad=.03, max_age_s=.08, min_normal_n=.2,
+                        edge_margin_m=.01)
+        ctl = core()
+        self.assertAlmostEqual(ctl.safe_half_width_m, .06925)
+        with self.assertRaises(ControllerFault):
+            ctl.update([ctl.safe_half_width_m, 0], .45, sample_time_s=1., now_s=1.)
 
     def test_duplicate_time_and_edge_fault(self):
         ctl = core()

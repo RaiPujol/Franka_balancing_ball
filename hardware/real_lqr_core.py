@@ -23,7 +23,7 @@ class BallLQRCore:
     """
 
     def __init__(self, *, max_tilt_rad, max_age_s, min_normal_n,
-                 edge_margin_m, ball_radius_m=0.04267 / 2,
+                 edge_margin_m, ball_radius_m,
                  tray_half_width_m=0.233 / 2, max_gap_s=0.15,
                  measurement_std_m=0.002, accel_std=0.3):
         vals = [max_tilt_rad, max_age_s, min_normal_n, edge_margin_m,
