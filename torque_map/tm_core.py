@@ -28,16 +28,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CALIB_FILE = os.path.join(HERE, "tm_calib.json")
 LOG_DIR = os.path.join(HERE, "logs")
 
-# Default map points from the deck diagram (mm, paddle frame). x: from the centre toward
-# the far edge (away from the tab and the robot). y: to the left, seen from the robot.
+# Default map points from the deck diagram, in mm. x: from the GRIP POINT (middle of the
+# fingers on the tab) toward the far edge, away from the robot. y: to the left, seen from
+# the robot. C is 125 mm out; the far row is another 101.29 mm.
 DEFAULT_POINTS = [
-    {"name": "C", "x": 0.0, "y": 0.0},
-    {"name": "L", "x": 0.0, "y": 105.0},
-    {"name": "R", "x": 0.0, "y": -101.0},
-    {"name": "F", "x": 101.29, "y": 0.0},
-    {"name": "FL", "x": 101.29, "y": 105.6},
-    {"name": "FR", "x": 101.29, "y": -102.2},
+    {"name": "C", "x": 125.0, "y": 0.0},
+    {"name": "L", "x": 125.0, "y": 105.0},
+    {"name": "R", "x": 125.0, "y": -101.0},
+    {"name": "F", "x": 226.29, "y": 0.0},
+    {"name": "FL", "x": 226.29, "y": 105.6},
+    {"name": "FR", "x": 226.29, "y": -102.2},
 ]
+GAIN_SCALES = {"1": 1.0, "2": 2.0}          # wrist stiffness: frankapy default, or twice as stiff
+
+
+def to_paddle(x_mm, y_mm):
+    """Point from the UI (mm from the grip point) to the paddle frame used inside (m from C)."""
+    return np.array([x_mm / 1000.0 - kin.GRIP_TO_C, y_mm / 1000.0])
 JOINT_NAMES = ["joint 1", "joint 2", "joint 3", "joint 4", "joint 5", "joint 6", "joint 7"]
 
 
@@ -58,6 +65,8 @@ class Calib:
         self.fit = None                         # {"a", "B", ...}
         self.tare_W = None
         self.tare_sigma = None
+        self.frame = "grip"                     # point x measured from the grip point
+        self.wrist_scale = 1.0                  # 1 = frankapy default gains on joints 5-7
 
     # -- persistence
     def to_json(self):
@@ -83,7 +92,24 @@ class Calib:
             for k in ("q0", "tare_W", "tare_sigma"):
                 if getattr(c, k) is not None:
                     setattr(c, k, np.array(getattr(c, k), dtype=float))
+            if "frame" not in d:
+                # files from the first version stored x from C: add the 125 mm, keep the recordings
+                off = kin.GRIP_TO_C * 1000.0
+                for p in c.points:
+                    p["x"] = round(p["x"] + off, 3)
+                for r in c.readings.values():
+                    r["x"] = round(r["x"] + off, 3)
+                c.frame = "grip"
         return c
+
+    @property
+    def gains(self):
+        """Joint impedance gains for streaming. Only the wrist (5-7) is scaled; damping
+        scales with the square root so the damping ratio stays the same."""
+        k, d = K_GAINS.copy(), D_GAINS.copy()
+        k[4:] *= self.wrist_scale
+        d[4:] *= np.sqrt(self.wrist_scale)
+        return k, d
 
     @property
     def T_paddle(self):
@@ -187,7 +213,7 @@ def job_record_point(io, calib, ctx, name, seconds=3.0):
     p = next((p for p in calib.points if p["name"] == name), None)
     if p is None:
         raise SafetyStop(f"no point called {name}")
-    io.place_ball((p["x"] / 1000.0, p["y"] / 1000.0), hold=True)
+    io.place_ball(tuple(to_paddle(p["x"], p["y"])), hold=True)
     ctx.status(f"recording point {name} ({p['x']:.0f}, {p['y']:.0f}) mm for {seconds:.0f} s")
     mean, std = record_static(io, calib, ctx, seconds)
     calib.readings[name] = {"mean": mean.tolist(), "std": std.tolist(), "x": p["x"], "y": p["y"],
@@ -213,7 +239,7 @@ def job_fit_map(io, calib, ctx):
         raise SafetyStop("record at least 3 points")
     ch = calib.channels
     e0 = np.array(calib.empty["mean"])
-    P = np.array([[calib.readings[n]["x"], calib.readings[n]["y"]] for n in names]) / 1000.0
+    P = np.array([to_paddle(calib.readings[n]["x"], calib.readings[n]["y"]) for n in names])
     D = np.array([np.array(calib.readings[n]["mean"])[ch] - e0[ch] for n in names])
     X = np.c_[np.ones(len(P)), P]
     coef, *_ = np.linalg.lstsq(X, D, rcond=None)
@@ -253,7 +279,8 @@ class Runner:
         _need_pose(calib)
         self.io, self.calib, self.ctx = io, calib, ctx
         self.dt = 1.0 / calib.rate_hz
-        self.servo = TiltServo(calib.q0, calib.T_paddle, self.dt, calib.tilt_max, lead=D_GAINS / K_GAINS)
+        self.k_gains, self.d_gains = calib.gains
+        self.servo = TiltServo(calib.q0, calib.T_paddle, self.dt, calib.tilt_max, lead=self.d_gains / self.k_gains)
         self.P2 = self.servo.R0[:2, :2]           # paddle x, y in the base frame
         self.tare = Tare(calib.tare_W.copy(), calib.tare_sigma.copy()) if calib.tare_W is not None else None
         self.log, self.log_name = {}, log_name
@@ -266,7 +293,7 @@ class Runner:
         self.io.goto(self.calib.q0, 4.0)
         self.servo.reset()
         self._vel, self._vz, self._late, self.accel_z = [], None, np.zeros(3), 0.0
-        self.io.start_stream(self.calib.q0)
+        self.io.start_stream(self.calib.q0, self.k_gains, self.d_gains)
 
     def stop(self):
         try:
@@ -300,8 +327,14 @@ class Runner:
         self._late = np.where(err > TRACK_TOL, self._late + self.dt, 0.0)
         if np.any(self._late > TRACK_TIME):
             j = int(np.argmax(self._late)) + 5
-            raise SafetyStop(f"joint {j} is not following its target ({np.degrees(err[j - 5]):.1f} deg off for "
-                             f"{TRACK_TIME:.1f} s): something blocks it, or a joint fault. Check clearance and Desk.")
+            i = j - 1
+            self._rec(t=self.t, q=q, tau=tau, q_target=self.servo.q.copy())
+            raise SafetyStop(
+                f"joint {j} is not following its target at t={self.t:.1f} s: target "
+                f"{np.degrees(self.servo.q[i] - self.calib.q0[i]):+.2f} deg, actual {np.degrees(q[i] - self.calib.q0[i]):+.2f} "
+                f"deg (from the balance pose), torque {tau[i]:+.2f} Nm, velocity {np.degrees(dq[i]):+.1f} deg/s. "
+                "Something blocks it (paddle, cable), the joint sticks, or a joint fault. Run the track test, "
+                "check Desk for errors, and send the log.")
         tilt = self.servo.measured_tilt(q)
         q_des = self.servo.step(tilt_target, tilt)
         if np.max(np.abs(q_des - self.calib.q0)) > 0.35 or np.any(q_des < JOINT_MIN + 0.02) \
@@ -309,7 +342,8 @@ class Runner:
             raise SafetyStop("joint target left the allowed window around the balance pose")
         self.io.command(q_des)
         self.t += self.dt
-        self._rec(t=self.t, q=q, tau=tau, tilt=tilt, tilt_cmd=self.servo.cmd.copy(), **extra)
+        self._rec(t=self.t, q=q, tau=tau, tilt=tilt, tilt_cmd=self.servo.cmd.copy(), q_target=self.servo.q.copy(),
+                  dq=dq, **extra)
         return q, dq, tau, phi, tilt, J
 
     def hold(self, seconds, settle=1.0):
@@ -369,6 +403,48 @@ def job_tilt_sweep(io, calib, ctx, seconds=60.0):
     ctx.log("tilt sweep: leftover torque while moving " + ", ".join(
         f"{JOINT_NAMES[c]} {tare.sigma[c] * 1000:.0f} mNm" for c in ch)
             + f" = ball position noise {noise[0]:.0f} mm (x), {noise[1]:.0f} mm (y) per sample => {verdict}")
+
+
+def job_track(io, calib, ctx, seconds=15.0, amp_deg=2.0):
+    """No ball. Each tilt axis rocks alone; checks that the wrist joints follow their
+    targets. This isolates the joint 6 problem from everything else."""
+    run = Runner(io, calib, ctx, os.path.join(LOG_DIR, f"track_{time.strftime('%m%d_%H%M%S')}.npz"))
+    amp = np.radians(amp_deg)
+    out = {}
+    run.start()
+    try:
+        run.prompt(f"Track test: no ball needed, hands off. Each tilt axis rocks alone for {seconds:.0f} s "
+                   f"(max {amp_deg:.0f} deg). Continue.", ball=None)
+        for ax, name in ((1, "B: forward/back (joint 6)"), (0, "A: left/right (joint 5)")):
+            ctx.status(f"track test, axis {name}")
+            cmd, meas, qt, qm = [], [], [], []
+            n = int(seconds / run.dt)
+            for i in range(n + int(1.5 / run.dt)):
+                t = i * run.dt
+                ramp = min(1.0, t / 2.0, max(0.0, (seconds - t) / 2.0))
+                target = np.zeros(2)
+                if i < n:
+                    target[ax] = amp * ramp * (0.6 * np.sin(2 * np.pi * 0.2 * t) + 0.4 * np.sin(2 * np.pi * 0.6 * t + 1.0))
+                q, _, tau, _, tilt, _ = run.cycle(target)
+                ctx.live(tau=tau, q=q, tilt=tilt)
+                if 1.0 < t < seconds - 1.0:
+                    cmd.append(run.servo.cmd[ax]), meas.append(tilt[ax]), qt.append(run.servo.q.copy()), qm.append(q)
+            out[name] = (np.array(cmd), np.array(meas), np.array(qt), np.array(qm))
+    except SafetyStop as e:
+        ctx.log(f"TRACK TEST FAILED: {e}")
+    finally:
+        run.stop()
+    for name, (c, m, qt, qm) in out.items():
+        best = max(range(0, 16), key=lambda k: np.corrcoef(c[:len(c) - k], m[k:])[0, 1])
+        corr = float(np.corrcoef(c[:len(c) - best], m[best:])[0, 1])
+        gain = float(np.polyfit(c[:len(c) - best], m[best:], 1)[0])
+        lag_err = np.degrees(np.abs(qm[:, 4:7] - qt[:, 4:7]).max(axis=0))
+        ok = 0.8 <= gain <= 1.2 and corr > 0.95 and best * run.dt <= 0.15
+        ctx.log(f"track axis {name}: gain {gain:.2f} (0.8-1.2), correlation {corr:.3f} (>0.95), lag {best * run.dt:.2f} s; "
+                f"worst joint error 5/6/7 = {lag_err[0]:.2f} / {lag_err[1]:.2f} / {lag_err[2]:.2f} deg => "
+                + ("PASS" if ok else "FAIL"))
+    if len(out) < 2:
+        ctx.log("track test incomplete: see the STOP message above")
 
 
 # ----------------------------------------------------------------------------------- block 3

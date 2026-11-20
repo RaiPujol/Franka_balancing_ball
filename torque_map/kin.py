@@ -20,6 +20,7 @@ D_GAINS = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 15.0])
 # Paddle mount: gripper straight down, fingers pinch the tab, deck flat 2 cm below the
 # fingertips, deck centre 125 mm out from the grip point along hand x (your diagram).
 PADDLE_CENTER_IN_EE = (0.125, 0.0, 0.020)
+GRIP_TO_C = PADDLE_CENTER_IN_EE[0]      # m, grip point to the centre point C (your diagram: 125 mm)
 PADDLE_AXES_IN_EE = ((1.0, 0.0, 0.0),        # paddle x: away from the tab (away from the robot)
                      (0.0, -1.0, 0.0),       # paddle y: to the left, seen from behind the robot
                      (0.0, 0.0, -1.0))       # paddle normal (up): -hand z

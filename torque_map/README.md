@@ -29,9 +29,10 @@ frankapy (all in the lab container). The page is plain HTML served by `app.py`.
 - Ball: solid, 74.5 mm, 193 g. Deck: 233 mm square, 162.5 g.
 - Mount: gripper straight down, fingers on the tab, deck 2 cm below the fingertips, deck
   centre 125 mm out from the grip point (`PADDLE_CENTER_IN_EE`).
-- Default map points (editable in the page), mm from the centre point C. x toward the far
-  edge (away from the robot), y to the left seen from the robot:
-  C (0, 0), L (0, 105), R (0, -101), F (101.29, 0), FL (101.29, 105.6), FR (101.29, -102.2).
+- Default map points (editable in the page), in mm. x is measured from the grip point (middle
+  of the fingers on the tab) toward the far edge, y to the left seen from the robot:
+  C (125, 0), L (125, 105), R (125, -101), F (226.29, 0), FL (226.29, 105.6), FR (226.29, -102.2).
+  A `tm_calib.json` from the first version (x from C) is converted automatically.
 
 ## At the lab
 
@@ -56,6 +57,11 @@ running step and levels the paddle; Ctrl-C in the terminal stops everything.
 2. *Go to balance pose* (MOVES), or *Guide mode 30 s* then *Use current pose*.
 3. The live check must show joint 5 and joint 6 axes under 10° from horizontal, paddle
    under 5° from level: **PASS**. Put a phone level on the paddle too.
+4. *Run track test* (MOVES, no ball): each tilt axis rocks alone for 15 s. Both axes must
+   PASS. If a joint stops following, it stops with the joint's target, actual angle, torque
+   and velocity: copy that line and send `logs/track_*.npz`.
+5. Optional: *wrist stiffness 2x stiffer* (Settings) if joint 6 lags or sticks; then redo
+   the tilt sweep.
 
 ### 2 · Torque map
 1. Ball off, hands off: **Record EMPTY**.

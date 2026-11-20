@@ -54,11 +54,14 @@ class FrankaIO:
             return
         self.fa.goto_joints(q.tolist(), duration=max(duration, dist / 0.3))
 
-    def start_stream(self, q):
-        """Start frankapy's dynamic joint skill (joint impedance, targets streamed by us)."""
+    def start_stream(self, q, k_gains=None, d_gains=None):
+        """Start frankapy's dynamic joint skill (its JointImpedanceFeedbackController with
+        these gains, targets streamed by us)."""
         q = np.asarray(q, dtype=float)
+        k = kin.K_GAINS if k_gains is None else np.asarray(k_gains, dtype=float)
+        d = kin.D_GAINS if d_gains is None else np.asarray(d_gains, dtype=float)
         self.fa.goto_joints(q.tolist(), duration=STREAM_SECONDS, dynamic=True, buffer_time=10,
-                            k_gains=kin.K_GAINS.tolist(), d_gains=kin.D_GAINS.tolist())
+                            k_gains=k.tolist(), d_gains=d.tolist())
         self._t0 = self._rospy.Time.now().to_time()
         self._id, self._last_q, self.streaming = 0, q, True
 

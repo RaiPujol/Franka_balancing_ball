@@ -51,6 +51,17 @@ class SimIO(_sb.SimIO):
             elif delay < -0.5:
                 self._wall = time.perf_counter() - self.data.time
 
+    def start_stream(self, q, k_gains=None, d_gains=None):
+        # the simulated impedance controller reads these module-level gains every step
+        _bc.K_GAINS[:] = kin.K_GAINS if k_gains is None else k_gains
+        _bc.D_GAINS[:] = kin.D_GAINS if d_gains is None else d_gains
+        super().start_stream(q)
+
+    def stop_stream(self):
+        super().stop_stream()
+        _bc.K_GAINS[:] = kin.K_GAINS
+        _bc.D_GAINS[:] = kin.D_GAINS
+
     def grip(self, close=True):
         pass
 

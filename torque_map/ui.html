@@ -105,9 +105,15 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
         <button data-job="grip">Close gripper</button>
         <button data-job="release">Open gripper</button>
       </div>
-      <h3>Tilt limit</h3>
+      <h3>Track test (no ball)</h3>
+      <p class="hint">Each tilt axis rocks alone for 15 s. Checks that joints 5, 6, 7 follow their targets. Run it
+        whenever a joint error appears; send the log if it fails.</p>
+      <div class="row"><button class="primary moves" data-job="track">Run track test</button></div>
+      <h3>Settings</h3>
       <div class="row"><label>max tilt (deg) <input id="tiltMax" type="number" step="0.5" min="1" max="6"></label>
-        <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value})">Save</button></div>
+        <label>wrist stiffness <select id="wristScale"><option value="1">default (frankapy)</option><option value="2">2x stiffer</option></select></label>
+        <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value, wrist_scale: el('wristScale').value})">Save</button></div>
+      <p class="hint">Changing the stiffness clears the tilt sweep (redo it before balancing).</p>
     </div>
     <div>
       <h2>Live check</h2>
@@ -131,8 +137,8 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
     </div>
     <div>
       <h2>Map points</h2>
-      <p class="hint">x: from the centre toward the far edge (away from the robot). y: to the left, seen from the robot. mm.
-        Ball still at each mark (putty or a washer), hands off, then Record.</p>
+      <p class="hint"><b>x</b>: from the grip point (middle of the fingers on the tab) toward the far edge.
+        <b>y</b>: to the left, seen from the robot. In mm. Ball still at each mark (putty or a washer), hands off, then Record.</p>
       <div class="row">
         <label>seconds per recording <input id="recSec" type="number" value="3" min="1" max="20"></label>
       </div>
@@ -183,7 +189,7 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
       <h2>Torque error vs the centre value</h2>
       <div class="legend"><span><i style="background:var(--c5)"></i>joint 5 (N·m)</span><span><i style="background:var(--c6)"></i>joint 6 (N·m)</span></div>
       <canvas id="cErr" width="900" height="340"></canvas>
-      <h2 style="margin-top:14px">Ball position estimate</h2>
+      <h2 style="margin-top:14px">Ball position estimate, from point C</h2>
       <div class="legend"><span><i style="background:var(--c5)"></i>x (mm)</span><span><i style="background:var(--c6)"></i>y (mm)</span></div>
       <canvas id="cPos" width="900" height="340"></canvas>
       <h2 style="margin-top:14px">Paddle tilt</h2>
@@ -278,11 +284,13 @@ function deckSVG(svg, opts) {
   s += `<line x1="${-h}" y1="0" x2="${h}" y2="0" stroke="${line}"/><line x1="0" y1="${-h}" x2="0" y2="${h}" stroke="${line}"/>`;
   s += `<text x="0" y="${-h - 6}" font-size="9" text-anchor="middle" fill="${ink2}">+x (far edge)</text>`;
   s += `<text x="${-h - 4}" y="3" font-size="9" text-anchor="end" fill="${ink2}">+y</text>`;
+  const g = S.calib.grip_to_c_mm;
   (S.calib.points || []).forEach(p => {
-    const rec = !!S.calib.readings[p.name];
-    s += `<circle cx="${-p.y}" cy="${-p.x}" r="4" fill="${rec ? acc : 'none'}" stroke="${acc}" stroke-width="1.5"/>`;
-    s += `<text x="${-p.y + 6}" y="${-p.x - 5}" font-size="8" fill="${ink2}">${p.name}</text>`;
+    const rec = !!S.calib.readings[p.name], px = p.x - g;
+    s += `<circle cx="${-p.y}" cy="${-px}" r="4" fill="${rec ? acc : 'none'}" stroke="${acc}" stroke-width="1.5"/>`;
+    s += `<text x="${-p.y + 6}" y="${-px - 5}" font-size="8" fill="${ink2}">${p.name}</text>`;
   });
+  s += `<circle cx="0" cy="${g}" r="2.5" fill="${ink2}"/><text x="5" y="${g - 3}" font-size="8" fill="${ink2}">grip</text>`;
   if (opts.trail && opts.trail.length > 1)
     s += `<polyline fill="none" stroke="${css.getPropertyValue('--c6')}" stroke-opacity=".45" stroke-width="1.5" points="${opts.trail.map(q => `${-q[1]},${-q[0]}`).join(' ')}"/>`;
   if (opts.ball) s += `<circle cx="${-opts.ball[1]}" cy="${-opts.ball[0]}" r="${R}" fill="${css.getPropertyValue('--c6')}" fill-opacity=".18" stroke="${css.getPropertyValue('--c6')}" stroke-width="2"/>`;
@@ -324,6 +332,7 @@ function render() {
   document.querySelectorAll('[data-job], .tab button.primary').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
   el('prompt').classList.toggle('on', !!S.prompt); el('promptMsg').textContent = S.prompt || '';
   if (document.activeElement !== el('tiltMax')) el('tiltMax').value = S.calib.tilt_max_deg;
+  if (document.activeElement !== el('wristScale')) el('wristScale').value = String(Math.round(S.calib.wrist_scale));
 
   const P = S.pose;
   if (P) {
