@@ -7,15 +7,30 @@ What we measured, what failed, and why each setting is what it is. Newest first.
 
 1. **The plate swing builds up after ~40 s.** In the best runs the ball holds for 30–55 s, then an end-to-end swing
    grows until the ball drops. Fix in place since Nov 24: the still-ball hold, braking allowed for fast returns, the
-   learned lean kept through resyncs, and a calmer setup (rolling gain 0.8, max ball speed 40 mm/s). Not yet tested on
-   the robot.
+   learned lean kept through resyncs (but reset when the ball is put back). On Nov 24 the more aggressive setup
+   (rolling gain 0.8, 40 mm/s, 1.5°) swung the plate ±1°: back to the 19:22 values.
 2. **The rail map goes stale.** On Nov 21 at 21:08, with the ball at C, joint 2 read about 0 mm and joint 4 about
    +40 mm (94 mm apart at the start of the run). The rail or ball had moved since the 18:57 map. Redo the map after any
    change, and after a reboot.
 3. **The rail ends.** Neither end has a stop. The ball wedges in a pocket at both ends (it sat 6 s at the back end
    with the back raised 1.9°) and falls off the front edge. Low stops at ±100 mm would make end events recoverable.
-4. **The true rolling gain is uncertain:** 0.53–0.86 × the 5/7 g model from long windows of the balancing logs. The
-   roll test (release 5 cm in from the ends) is the clean way to measure it.
+4. **The true rolling gain is uncertain:** 0.53–0.86 × the 5/7 g model from long windows of the balancing logs, but
+   the runs swing more whenever it is set below 1.0. The roll test (release 5 cm in from the ends) is the clean way
+   to measure it.
+5. **Joint 4 drifts** (+86 mNm over one map on Nov 24; the joint gap changed 80–98 mm in a run); joint 2 stays put.
+
+## Nov 24 2026, iam-bruno (after a reboot)
+
+Re-calibrated: track test PASS (gain 0.86, lag 80 ms); rail map **point errors 1.2 mm** (best so far) but joint 4's
+empty reading drifted +86 mNm over the map and its still-noise was ~3x Nov 21 (26-30 mNm); sweep PASS, **6 mm per
+sample**; **level trim −0.85°** by phone level (the balancing-log estimate of −0.2° was wrong: stiction).
+
+| Time | Result | What we learned / changed |
+|---|---|---|
+| 21:43 | 41.7 s, then 2 fast drops (4.5 s, 7.3 s) | settings rolling gain 0.8, max ball speed 40, max tilt 1.5: the plate swung ±1.0° rms and the ball went ±60–100 mm every ~4 s (the 19:22 best run: ±0.2–0.3°, ±5–8 mm). The learned lean (−0.36°, learned during that swing) was carried into the re-placements and pushed the ball off the front within 3 s → lean reset on every re-placement again; preset back to the 19:22 values (rolling gain 1.0, 20 mm/s, 1.2°) keeping the end guard, hold and recovery fixes |
+
+Lesson: every time the controller was made more aggressive (lower rolling gain, higher ball speed or tilt) the plate
+swung more. The real rolling gain is probably near 1.0.
 
 ## Nov 21 2026, iam-bruno (control PC iam-snowwhite)
 

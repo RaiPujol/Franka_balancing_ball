@@ -112,8 +112,9 @@ PRESETS = {
     # vibration, 28 Hz): ramping kick + stronger catch. Back from the rail ends in ~3 s (run-6 settings: 13-17 s)
     # SMOOTH rail (Nov 21 16:33-16:47, real robot, rail fixed to roll freely): gentle PD, small tilts, no
     # stiction model. Best real result: holds of 21-46 s, ~3 drops per 90 s (with the start fix, 16:46).
-    # smooth: the setup of the best iam-bruno runs (Nov 21: 55 s, 43 s holds), with max tilt 1.5 and ball speed 40
-    "smooth": dict(_COMMON, ctrl="pd", kp=1.0, kv=2.0, vmax_mm_s=40.0, tilt_max_deg=1.5, lead_s=0.35, rate_max_dps=10.0,
+    # smooth: the setup of the best run (iam-bruno Nov 21 19:22, 55 s at +-5-8 mm). Raising max tilt / ball speed and
+    # lowering the rolling gain made the plate swing more every time (Nov 21 21:08, Nov 24 21:43)
+    "smooth": dict(_COMMON, ctrl="pd", kp=1.0, kv=2.0, vmax_mm_s=20.0, tilt_max_deg=1.2, lead_s=0.35, rate_max_dps=10.0,
                    kf_accel=0.2, kf_bias=0.02, kf_bias_max_deg=2.0, kick_deg=0.0, stick_deg=0.0, unstick_dps=3.0),
     "pd": dict(_COMMON, ctrl="pd", kp=2.0, kv=3.0, vmax_mm_s=30.0, tilt_max_deg=2.5, lead_s=0.35, rate_max_dps=10.0,
                kf_accel=0.2, kf_bias_max_deg=2.0, kick_deg=1.2, unstick_dps=3.0),
@@ -1087,7 +1088,9 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                     if k_ * run.dt >= 0.5:
                         ps_.append(measure(q, tau, phi, J, 0.0)[0])
                 offset = anchor_p - float(np.mean(ps_))
-                kf.x[:] = [anchor_p, 0.0, kf.x[2]]           # keep the learned lean (see resync)
+                # RESET the learned lean when the ball is put back: the lean learned while the ball swung end to end is
+                # junk, and carrying it over (-0.36 deg) pushed the re-placed ball off within 3 s (Nov 24 21:44)
+                kf.x[:] = [anchor_p, 0.0, 0.0]
                 kf.P[:] = START_P
                 t_start = i * run.dt
                 pres_avg, gone_t, integ, still_t, pinned_t, contact_t, w_avg, d_avg = tau_on, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, None

@@ -127,11 +127,11 @@ drop or a press pauses it and asks for the ball.
 | Setting | Recommended | What it does / when to change |
 |---|---|---|
 | Kp, Kv | 1.0, 2.0 /s | position and speed gains. Overshoots: raise Kv or lower max ball speed. Sluggish: raise Kp |
-| max ball speed | 40 mm/s | the speed the controller steers the ball back with |
-| max counter-angle | 1.5° | tilt limit. Higher catches harder pushes but swings the plate more |
+| max ball speed | 20 mm/s | the speed the controller steers the ball back with |
+| max counter-angle | 1.2° | tilt limit. Higher catches harder pushes but swings the plate more |
 | look-ahead | 0.35 s | makes up for the paddle's lag (~0.3 s at each reversal) |
 | max tilt accel / rate | 40 °/s², 10 °/s | jerky tilts shake the arm and swamp the torque signal |
-| **rolling gain** | 0.8 | real ball acceleration ÷ the 5/7 g model. A ball on two sticks rolls on a smaller radius and speeds up less. Too low: the plate over-swings. Too high: corrections are too weak |
+| **rolling gain** | 1.0 | real ball acceleration ÷ the 5/7 g model. A ball on two sticks rolls on a smaller radius and speeds up less. Too low: the plate over-swings. Too high: corrections are too weak |
 | **level trim** | from the phone level | where "level" is along the rail |
 | **hold mm, hold mm/s** | 12, 15 | still-ball hold (0 = off) |
 | accel noise, offset drift | 0.2, 0.02 | Kalman filter: how fast it follows the ball / learns the lean |
