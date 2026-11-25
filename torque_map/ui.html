@@ -305,6 +305,7 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
           <label title="still-ball hold: inside this distance from the goal (and slower than the hold speed) the paddle eases to level instead of chasing noise. 0 = off">hold mm <input data-t="hold_mm" type="number" step="1" min="0" max="50"></label>
           <label title="still-ball hold speed: slower than this (and inside hold mm) the paddle eases to level">hold mm/s <input data-t="hold_mm_s" type="number" step="1" min="0" max="100"></label>
           <label title="emergency brake: a ball that would hit an end even at the max counter-angle is braked with up to this tilt until it turns (0 = off)">brake tilt ° <input data-t="brake_tilt_deg" type="number" step="0.1" min="0" max="5"></label>
+          <label title="joint-drift correction: the other sensing joints' zeros are pulled toward joint 2 with this time constant (0 = off)">drift fix s <input data-t="drift_comp_s" type="number" step="5" min="0" max="300"></label>
           <label title="filter: a still ball stays put below this tilt (0 = off)">stick ° <input data-t="stick_deg" type="number" step="0.1" min="0" max="3"></label>
           <label title="reactive mode: ignore the torque reading while the tilt accelerates harder than this (0 = off)">gate °/s² <input data-t="gate_accel_dps2" type="number" step="10" min="0" max="5000"></label>
         </div>

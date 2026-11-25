@@ -76,6 +76,8 @@ DEFAULT_CFG = {
     "brake_margin_mm": 60.0,   # where the ball must be stopped by (the rail ends are at +-79 mm)
     "kick_deg": 1.0,           # ball still and off the goal: tilt at least this much toward the goal (0 = off)
     "deadband_mm": 8.0,        # no kicks inside this distance from the goal
+    "drift_comp_s": 10.0,      # joint-drift correction: joint 4's zero crept up ~45 mNm per run on Nov 24 (joint 2 stayed
+                               # put); its zero is pulled back toward joint 2 with this time constant (0 = off)
     "brake_tilt_deg": 2.5,     # emergency brake: a ball that would hit an end even at full normal tilt is braked with up
                                # to this tilt until it turns (0 = off). Nov 24 21:54: a 250 mm/s push needed ~2.3 deg
     "hold_mm": 12.0,           # still-ball hold: inside this distance from the goal AND slower than hold_mm_s the paddle
@@ -125,7 +127,7 @@ PRESETS = {
 TUNABLE = ("ctrl", "kp", "kv", "vmax_mm_s", "lqr_gain", "lqr_qv", "lead_s", "goal_mm", "tilt_max_deg", "rate_max_dps",
            "wc", "kf_accel", "kf_bias", "kf_bias_max_deg", "kf_r_scale", "kf_adapt", "end_clamp", "unstick", "unstick_dps", "balance_stops", "accel_max_dps2", "ki", "ki_max_deg",
            "brake_zone", "brake_margin_mm", "kick_deg", "deadband_mm", "stick_deg", "gate_accel_dps2",
-           "level_trim_deg", "roll_scale", "hold_mm", "hold_mm_s", "brake_tilt_deg")
+           "level_trim_deg", "roll_scale", "hold_mm", "hold_mm_s", "brake_tilt_deg", "drift_comp_s")
 BOOLS = ("kf_adapt", "end_clamp", "unstick", "balance_stops", "brake_zone")
 # Kalman filter: how much ball acceleration the model may NOT explain (m/s^2). The model knows
 # gravity along the tilt and the deck's sideways push; what is left is rolling friction and
@@ -143,7 +145,7 @@ LIMITS = {"rate_hz": (20.0, 100.0), "tilt_max_deg": (0.5, 5.0), "rate_max_dps": 
           "brake_margin_mm": (10.0, 79.0), "kick_deg": (0.0, 5.0), "deadband_mm": (0.0, 50.0), "stick_deg": (0.0, 3.0),
           "gate_accel_dps2": (0.0, 5000.0), "level_trim_deg": (-3.0, 3.0), "roll_scale": (0.2, 1.5),
           "hold_mm": (0.0, 50.0), "hold_mm_s": (0.0, 100.0),
-          "brake_tilt_deg": (0.0, 5.0)}
+          "brake_tilt_deg": (0.0, 5.0), "drift_comp_s": (0.0, 300.0)}
 
 
 def rail_q0(calib, c):
@@ -722,8 +724,10 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
             run.prompt("Put the ball IN THE RAIL near the centre (C), let go, then Continue.",
                        ball=_ball_xy(c["axis"], 0.01))
 
+        dcorr = np.zeros(len(ch))                      # slow zero correction per sensing joint (joint 2 = reference)
+
         def measure(q, tau, phi, J, ball_acc):
-            d = (tau - run.tare.predict(phi))[ch]
+            d = (tau - run.tare.predict(phi))[ch] - dcorr
             d = d - m * ball_acc * (u @ J[:3, ch])      # the ball pushes back along the rail while it accelerates
             pb, _ = combine(rm, d, sig_ch)              # base position of the contact point, from C at the level pose
             Tq, _ = fk(q, calib.T_paddle)
@@ -900,7 +904,21 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                 # fixes their average). Take their gap 1 s after each (re)anchor as normal; warn when it CHANGES
                 if gap_t0 != t_start and i * run.dt - t_start >= 1.0:
                     gap_base, gap_t0 = gap.copy(), t_start
+                # joint-drift correction: keep the gap to joint 2 (the reference, ch[0]) at its anchor value by slowly
+                # moving the other joints' zeros (Nov 24: joint 4 crept +27..+156 mNm per run, all 11 drops at the end
+                # the drift pushed the ball toward). Only with the ball on and settled; reset at every re-zero
+                # (only near C, where the reference gap was taken: the gap also changes with the ball's position because
+                # the joints' slopes never match the map exactly; correcting everywhere chased the position)
+                if (gap_base is not None and T.get("drift_comp_s", 0) > 0 and w_avg > 0.6
+                        and i * run.dt - t_start > 2.0 and abs(kf.x[1]) < 0.05 and abs(kf.x[0] - anchor_p) < 0.030):
+                    for kk in range(1, len(ch)):
+                        dev = (p_each[0] - p_each[kk]) - (gap_base[0] - gap_base[kk])
+                        dcorr[kk] = float(np.clip(dcorr[kk] - (run.dt / T["drift_comp_s"]) * dev * np.array(rm["b"])[kk],
+                                                  -0.3, 0.3))
                 spread_avg = float(np.ptp(gap - gap_base)) if gap_base is not None else 0.0
+                # a correction this large means a joint really drifted: report it (whichever joint it was)
+                corr_mm = float(np.max(np.abs(dcorr / np.array(rm["b"])))) if len(ch) >= 2 else 0.0
+                spread_avg = max(spread_avg, corr_mm)
                 disagree_t = disagree_t + run.dt if spread_avg > 0.025 else 0.0
                 if disagree_t > 2.0 and run.t - last_disagree_log > 10.0:
                     last_disagree_log = run.t
@@ -1052,7 +1070,7 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                      v_star=v_star, p_ahead=p_ahead, goal=goal, pinned=float(pinned), unstick=float(unsticking),
                      resyncs=float(resyncs), i_tilt=T["ki"] * integ, braking=float(braking), kicking=float(kicking),
                      gated=float(gated), cycle_t=run.t, spread=spread_avg, ball_w=w_avg, outliers=float(outliers),
-                     hold=hold_f, emergency=float(emergency), jumps=float(jumps), pushes=float(pushes),       # cycle_t: matches the per-cycle "t" of this step
+                     hold=hold_f, emergency=float(emergency), jumps=float(jumps), pushes=float(pushes), dcorr=dcorr.copy(),       # cycle_t: matches the per-cycle "t" of this step
                      r=np.sqrt(r), a_deck=a_deck, truth=io.ball_truth())
             show = (show + [p_meas])[-max(int(0.25 / run.dt), 1):]
             if i % 2 == 0:
@@ -1128,6 +1146,7 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                     else:
                         zero = np.zeros_like(zero)          # never learn the ball's weight as "empty"
                 run.tare.rezero(zero)
+                dcorr[:] = 0.0                                  # the re-zero measured the true zeros
                 z_mm = float(np.mean(zero[ch] / np.array(rm["b"]))) * 1000
                 ctx.log(f"re-zeroed with the paddle empty: the sensing joints had drifted {z_mm:+.0f} mm-equivalent "
                         f"({', '.join(f'{JOINT_NAMES[j]} {zero[j] * 1000:+.0f} mNm' for j in ch)})")

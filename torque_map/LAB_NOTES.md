@@ -23,7 +23,8 @@ What we measured, what failed, and why each setting is what it is. Newest first.
 4. **The true rolling gain is uncertain:** 0.53–0.86 × the 5/7 g model from long windows of the balancing logs, but
    the runs swing more whenever it is set below 1.0. The roll test (release 5 cm in from the ends) is the clean way
    to measure it.
-5. **Joint 4 drifts** (+86 mNm over one map on Nov 24; the joint gap changed 80–98 mm in a run); joint 2 stays put.
+5. **Joint 4 drifts** (+86 mNm over one map, +27..+156 mNm per run on Nov 24, almost always upward); joint 2 stays
+   put. The drift fix (since Nov 24 22:55) corrects it slowly; not yet tested on the robot.
 
 ## Nov 24 2026, iam-bruno (after a reboot)
 
@@ -41,6 +42,8 @@ Settings of the 21:52 run: rolling gain 1.0, Kp 1.0, Kv 2.0, max ball speed 20 m
 0.35 s, level −0.85°, still-ball hold 12 mm / 15 mm/s.
 
 | **22:15** | **175.9 s, best run: 54 pushes, 48 returned to the centre** | the consistent-reading acceptance, push detection and emergency brake (7 s of use in total) caught pushes up to ~220 mm/s and balls that reached the rail end. One drop at the end |
+
+| 22:23–22:50 | 11 runs of 7–94 s, same code and settings as the 175.9 s run | every drop at the **back** end, each right after the ball reached **180–520 mm/s** (harder pushes than the best run caught, ~220 mm/s; above ~130–220 mm/s nothing can stop it on this rail); in 3 runs a hand was on the ball or paddle 22–38 % of the time. And **joint 4's zero crept up +27..+156 mNm per run** (joint 2 stayed put): that moves the estimate 10–25 mm toward the front, so the ball was held toward the back, with less room there → joint-drift correction: joint 4's zero is pulled toward joint 2 (10 s) while the ball sits near C (fake: bias −19 → −8 mm) |
 
 Lesson: every time the controller was made more aggressive (lower rolling gain, higher ball speed or tilt) the plate
 swung more. The real rolling gain is probably near 1.0.

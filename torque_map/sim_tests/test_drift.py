@@ -1,4 +1,5 @@
-"""Joint 2's zero drifts 4 mNm/s: the joint-gap check must warn. Without drift it must stay quiet."""
+"""Joint 2's zero drifts 4 mNm/s: the joint-gap check must warn (drift correction off: this tests the detector).
+Without drift it must stay quiet."""
 import numpy as np, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import common
 exec(common.yaw_prelude())
@@ -11,7 +12,7 @@ class Drift(GenFake):
         return st
 res = {}
 for rate in (0.0, 0.004):
-    io = Drift(2); io.rate = rate; c = common.setup(io, rail, kin, tm, H)
+    io = Drift(2); io.rate = rate; c = common.setup(io, rail, kin, tm, H, drift_comp_s=0.0)
     logs = []
     class C(H.Ctx):
         t0 = None

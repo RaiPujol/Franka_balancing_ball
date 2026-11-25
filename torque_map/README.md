@@ -140,6 +140,7 @@ drop or a press pauses it and asks for the ball.
 | **rolling gain** | 1.0 | real ball acceleration ÷ the 5/7 g model. A ball on two sticks rolls on a smaller radius and speeds up less. Too low: the plate over-swings. Too high: corrections are too weak |
 | **level trim** | from the phone level | where "level" is along the rail |
 | **hold mm, hold mm/s** | 12, 15 | still-ball hold (0 = off) |
+| **drift fix** | 10 s | joint-drift correction: joint 4's zero is pulled back toward joint 2 (the stable one) with this time constant while the ball sits near C; reset at every re-zero. 0 = off |
 | **brake tilt** | 2.5° | emergency brake: a ball that would hit an end even at the max counter-angle is braked with up to this tilt (and twice the tilt rate) until it turns. 0 = off |
 | accel noise, offset drift | 0.2, 0.02 | Kalman filter: how fast it follows the ball / learns the lean |
 
@@ -156,7 +157,8 @@ rolling gain and the level trim to set. Both rail ends hold the ball in a pocket
 |---|---|---|
 | The page never appears | control PC server not running | terminal 2; check `rosnode list` shows `robot_state_publisher_node_1` |
 | Ball estimate jumps far while the ball is still | load change sprang the arm, or the map is stale | the outlier gate handles single jumps; if it persists, redo map + sweep |
-| "drift: the gap between the sensing joints changed" | one joint's zero moved | re-anchor (click the drawing), or redo the sweep |
+| "drift: the gap between the sensing joints changed" | one joint's zero moved (joint 4 creeps up ~45 mNm per run) | the drift fix corrects joint 4 slowly; if the warning persists, re-anchor (click the drawing) or redo the sweep |
+| Ball always falls off the same end after a few runs | a joint's zero drift shifts the estimate, so the ball is held off-centre | drift fix on; stop and restart the run (re-zero + anchor) every few minutes |
 | Ball always runs to one end | level trim off, or a real slope in the rail | phone level in Probe; roll test |
 | Plate swings larger and larger | rolling gain too low or max ball speed too high | raise rolling gain toward 1.0, lower max ball speed |
 | Ball falls off an open end | no end stop on the rail | add a low stop (tape, putty) at both ends at ±100 mm |

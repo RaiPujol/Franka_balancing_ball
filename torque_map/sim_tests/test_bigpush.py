@@ -4,40 +4,12 @@ at 120 mm/s (PUSH=<m/s> to change; ~120 mm/s is the most this rail can catch, th
 with the brake off is reported for comparison."""
 import numpy as np, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import common
-exec(common.yaw_prelude())
+exec(common.bruno_prelude())
 BREAK, ROLLF, LEAN = np.radians(0.1), np.radians(0.05), 0.0
 lim = 0.115                                     # the fake's rail end (yaw_test reads this global)
 
 
-class BrunoFake(GenFake):
-    """GenFake made like iam-bruno: 100 Hz state and wrist joints that follow freely (GenFake imitates the earlier
-    arm: 28 Hz state and sticky wrist joints, which delayed the paddle ~0.5 s and made every hard push a drop)."""
-    def read(self):
-        if getattr(self, "_c", None) is None or self.t - self._ct >= 0.0099:
-            st = H.HardIO.read(self)
-            st["tau"][[1, 3]] += self.rng.normal(0, 0.012, 2)
-            self._c, self._ct = st, self.t
-        return {k: np.array(v, copy=True) for k, v in self._c.items()}
 
-    def _sim(self, T):
-        h = 0.001
-        for _ in range(int(round(T / h))):
-            if self.streaming:
-                for j in (4, 5):
-                    tq = self.K[j] * (self.qd[j] - self.q[j]) - self.D[j] * self.dq[j]
-                    self.dq[j] += tq / 0.02 * h; self.q[j] += self.dq[j] * h
-            if self.ball is not None and not self.hold:
-                T_, _ = kin.fk(self.q, kin.paddle_transform())
-                g_t = -0.6 * 9.81 * (T_[:3, 1][2] + np.sin(LEAN))
-                if abs(self.v) < 0.002 and abs(g_t) <= 0.6 * 9.81 * np.sin(BREAK):
-                    self.v = 0.0
-                else:
-                    self.v += (g_t - np.sign(self.v if self.v else g_t) * 0.6 * 9.81 * np.sin(ROLLF)) * h
-                self.ball += self.v * h
-                if abs(self.ball) >= lim:
-                    if abs(self.v) > 0.02: self.ball = None; self.v = 0.0
-                    else: self.ball = np.sign(self.ball) * lim; self.v = 0.0
-            self.t += h
 PUSH = float(os.environ.get("PUSH", 0.12))
 out = {}
 for brake in (0.0, 2.5):
