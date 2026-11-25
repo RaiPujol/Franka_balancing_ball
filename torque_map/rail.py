@@ -29,6 +29,7 @@ Blocks (all need the balance pose from block 1):
   job_rail_balance  the balancer
 """
 
+import itertools
 import os
 import time
 
@@ -75,6 +76,8 @@ DEFAULT_CFG = {
     "brake_margin_mm": 60.0,   # where the ball must be stopped by (the rail ends are at +-79 mm)
     "kick_deg": 1.0,           # ball still and off the goal: tilt at least this much toward the goal (0 = off)
     "deadband_mm": 8.0,        # no kicks inside this distance from the goal
+    "brake_tilt_deg": 2.5,     # emergency brake: a ball that would hit an end even at full normal tilt is braked with up
+                               # to this tilt until it turns (0 = off). Nov 24 21:54: a 250 mm/s push needed ~2.3 deg
     "hold_mm": 12.0,           # still-ball hold: inside this distance from the goal AND slower than hold_mm_s the paddle
     "hold_mm_s": 15.0,         # eases back to level instead of chasing sensor noise (0 = off). Nov 21 21:08: the ball sat
                                # still while the tilt dithered and wandered to -0.9 deg, then broke loose and ran off
@@ -122,13 +125,15 @@ PRESETS = {
 TUNABLE = ("ctrl", "kp", "kv", "vmax_mm_s", "lqr_gain", "lqr_qv", "lead_s", "goal_mm", "tilt_max_deg", "rate_max_dps",
            "wc", "kf_accel", "kf_bias", "kf_bias_max_deg", "kf_r_scale", "kf_adapt", "end_clamp", "unstick", "unstick_dps", "balance_stops", "accel_max_dps2", "ki", "ki_max_deg",
            "brake_zone", "brake_margin_mm", "kick_deg", "deadband_mm", "stick_deg", "gate_accel_dps2",
-           "level_trim_deg", "roll_scale", "hold_mm", "hold_mm_s")
+           "level_trim_deg", "roll_scale", "hold_mm", "hold_mm_s", "brake_tilt_deg")
 BOOLS = ("kf_adapt", "end_clamp", "unstick", "balance_stops", "brake_zone")
 # Kalman filter: how much ball acceleration the model may NOT explain (m/s^2). The model knows
 # gravity along the tilt and the deck's sideways push; what is left is rolling friction and
 # bumps on the rail, a few hundredths of g. 0.05 m/s^2 is about 0.4 deg of unknown tilt.
 SMOOTH = {"low": 0.15, "medium": 0.05, "high": 0.025}
 BIAS_MAX = np.radians(1.0)          # the paddle is level to better than this (tilt-equivalent of the bias state)
+LOG_PART_SECONDS = 600.0      # an endless balancing run saves its log in parts of this length
+
 DEFAULT_POINTS = [-60.0, -30.0, 0.0, 30.0, 60.0]     # mm from C along the rail
 LIMITS = {"rate_hz": (20.0, 100.0), "tilt_max_deg": (0.5, 5.0), "rate_max_dps": (0.5, 30.0), "wc": (2.0, 30.0),
           "kp": (0.05, 20.0), "kv": (0.2, 50.0), "vmax_mm_s": (5.0, 1000.0), "lead_s": (0.0, 1.0),
@@ -137,7 +142,8 @@ LIMITS = {"rate_hz": (20.0, 100.0), "tilt_max_deg": (0.5, 5.0), "rate_max_dps": 
           "accel_max_dps2": (5.0, 5000.0), "ki": (0.0, 20.0), "ki_max_deg": (0.0, 5.0),
           "brake_margin_mm": (10.0, 79.0), "kick_deg": (0.0, 5.0), "deadband_mm": (0.0, 50.0), "stick_deg": (0.0, 3.0),
           "gate_accel_dps2": (0.0, 5000.0), "level_trim_deg": (-3.0, 3.0), "roll_scale": (0.2, 1.5),
-          "hold_mm": (0.0, 50.0), "hold_mm_s": (0.0, 100.0)}
+          "hold_mm": (0.0, 50.0), "hold_mm_s": (0.0, 100.0),
+          "brake_tilt_deg": (0.0, 5.0)}
 
 
 def rail_q0(calib, c):
@@ -669,7 +675,8 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
         if not changed:
             return
         T.update(new)
-        run.servo.tilt_max = np.radians(T["tilt_max_deg"])
+        run.servo.tilt_max = np.radians(max(T["tilt_max_deg"], T.get("brake_tilt_deg", 0.0)))   # the loop clips to
+                                                        # tilt_max itself; only the emergency brake goes past it
         run.servo.rate_max = np.radians(T["rate_max_dps"])
         run.servo.wc = T["wc"]
         run.servo.q0[ax["joint"]] = ax["q0"][ax["joint"]] + np.radians(T["level_trim_deg"]) / ax["s"]
@@ -787,11 +794,17 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
         gate_t, dcmd_prev_g, gated = 0.0, run.servo.dcmd[k], False
         spread_avg, disagree_t, last_disagree_log, p_each_avg = 0.0, 0.0, -1e9, None
         outlier_t, outliers, gate_cool = 0.0, 0, 0.0
+        recent, jumps, zs, pushes = [], 0, [], 0
         gap_base, gap_t0 = None, None
         integ = 0.0                                     # integral of the position error (m s)
         still_t = 0.0
         ctx.status(f"probe: paddle level, move the ball slowly with a stick" if probe else f"balancing along {ax['name']}")
-        for i in range(int(seconds / run.dt)):
+        # seconds <= 0: run until STOP. The log is then saved in 10-minute parts (an hour at 100 Hz kept in memory
+        # would grow to gigabytes)
+        endless = seconds <= 0
+        for i in (itertools.count() if endless else range(int(seconds / run.dt))):
+            if endless and i > 0 and i % int(LOG_PART_SECONDS / run.dt) == 0:
+                run.flush_log()
             if i % 10 == 0 and tune_version() != seen_version:
                 seen_version = None                             # None: re-read the settings on the first step, so changes
                                                         # made while a start-up prompt was waiting are applied
@@ -831,7 +844,22 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                 r = T["kf_r_scale"] * (max(sp ** 2, r_ema - kf.P[0, 0]) if T["kf_adapt"] else sp ** 2)
                 # one-off jumps (a load change springing the arm: -1700 mm on Nov 21 19:40 at 151.6 s) are not the ball:
                 # skip them, for at most 0.3 s; a real jump that persists then goes through (and the resync below)
-                if abs(innov) > max(0.06, 5.0 * np.sqrt(kf.P[0, 0] + r)) and outlier_t < 0.3 and gate_cool <= 0:
+                # ...but if the last 5 readings AGREE with each other (spread < 30 mm) the ball really moved: accept at once.
+                # Nov 24 21:54: a push sent the ball to the back at ~250 mm/s; the gate skipped 0.5 s of consistent
+                # readings and the estimate stayed at -16 mm until the ball was already at the end
+                recent = (recent + [p_meas])[-5:]
+                consistent = len(recent) == 5 and float(np.ptp(recent)) < 0.030
+                if consistent and len(ch) >= 2 and gap_base is not None:
+                    # a real ball moves BOTH joints' readings; an arm spring (Nov 21 19:40) moved one: require agreement
+                    pj = (np.asarray(d, dtype=float) - np.array(rm["a"])) / np.array(rm["b"])
+                    consistent = abs((pj[0] - pj[1]) - (gap_base[0] - gap_base[1])) < 0.060
+                if consistent and abs(innov) > 0.06:
+                    jump_to = float(np.median(recent))
+                    kf.x[1] = float(np.clip((recent[-1] - recent[0]) / (4 * run.dt) * 0.5 + kf.x[1] * 0.5, -0.4, 0.4))
+                    kf.x[0] = jump_to
+                    kf.P[0, 0] = max(kf.P[0, 0], r)
+                    outlier_t, jumps = 0.0, jumps + 1
+                elif abs(innov) > max(0.06, 5.0 * np.sqrt(kf.P[0, 0] + r)) and outlier_t < 0.3 and gate_cool <= 0:
                     outlier_t += run.dt
                     outliers += 1
                 else:
@@ -839,6 +867,16 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                         gate_cool = 1.0                 # skipped 0.3 s: maybe the ESTIMATE is off. Let readings in for 1 s
                     outlier_t = 0.0
                     r_ema += (0.035 / 1.0) * (innov ** 2 - r_ema)          # about 1 s memory at ~28 Hz
+                    # push detection: 6 readings in a row on the same side of the prediction, > 2 sigma on average, is a
+                    # real speed change the smooth-ball model does not expect (a push). Open up the speed uncertainty so
+                    # the filter catches up in ~0.1 s (it lagged 30 mm / 80 mm/s behind a 150 mm/s push on the fake)
+                    # (normalised by the FIXED sensor noise of the sweep: the learned noise grows during a push and hid it)
+                    zs = (zs + [innov / np.sqrt(kf.P[0, 0] + sp ** 2)])[-6:]
+                    if len(zs) == 6 and (all(z > 0 for z in zs) or all(z < 0 for z in zs)) and abs(np.mean(zs)) > 2.0:
+                        kf.P[1, 1] = max(kf.P[1, 1], 0.15 ** 2)
+                        kf.P[0, 0] = max(kf.P[0, 0], r)
+                        pushes += 1
+                        zs = []
                     kf.update(p_meas, r)
             e_prev = e
             gate_cool = max(0.0, gate_cool - run.dt)
@@ -959,6 +997,16 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                 p_stop = st[0] + v_now * 0.3 + np.sign(v_now) * v_now ** 2 / (2 * a_brk)
                 if abs(p_stop) > T["brake_margin_mm"] / 1000.0 and p_stop * v_now > 0:
                     e_t, braking = float(-np.sign(v_now) * tmax), True
+            # emergency brake: even full normal tilt would not stop the ball before the end it heads to -> brake harder
+            # (up to brake_tilt_deg) until it turns. Only ever against the ball's motion, so it cannot launch it
+            emergency = False
+            if not probe and T.get("brake_tilt_deg", 0.0) > np.degrees(tmax) and abs(v_now) > 0.03:
+                a_max = T["_ra"] * np.sin(tmax)
+                p_stop = st[0] + v_now * 0.3 + np.sign(v_now) * v_now ** 2 / (2 * a_max)
+                if abs(p_stop) > lim - 0.010 and p_stop * v_now > 0:
+                    need = (v_now ** 2 / (2 * max(lim - 0.010 - abs(st[0] + v_now * 0.3), 0.01))) / T["_ra"]
+                    e_b = float(np.arcsin(np.clip(need, np.sin(tmax), np.sin(np.radians(T["brake_tilt_deg"])))))
+                    e_t, braking, emergency = float(-np.sign(v_now) * e_b), True, True
             # kick: the ball sits still off the goal (sticky rail): tilt at least kick_deg toward the goal
             # kick, anywhere on the rail: the ball sits still off the goal (sticky rail: it needs ~1.6 deg to
             # break free, more than the controller asks for). Start at kick_deg toward the goal and RAMP UP
@@ -994,13 +1042,17 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
             ramp = min(1.0, max(0.0, (i * run.dt - t_start) / 2.0))   # soft start after (re)anchoring
             if not unsticking:
                 e_t *= ramp
-            e_t = float(np.clip(e_t, -tmax, tmax))
+            e_lim = np.radians(T["brake_tilt_deg"]) if emergency else tmax
+            boost = 2.0 if emergency else 1.0                 # the paddle may move twice as fast while braking hard
+            run.servo.rate_max = np.radians(T["rate_max_dps"]) * boost
+            run.servo.accel_max = np.radians(T["accel_max_dps2"]) * boost
+            e_t = float(np.clip(e_t, -e_lim, e_lim))
             target = np.zeros(2) if probe else _tilt_target(run, sgn * e_t)
             run._rec(p_meas=p_meas, p_est=st[0], v_est=st[1], bias=bias, tilt_target=sgn * e_t, d=d, offset=offset,
                      v_star=v_star, p_ahead=p_ahead, goal=goal, pinned=float(pinned), unstick=float(unsticking),
                      resyncs=float(resyncs), i_tilt=T["ki"] * integ, braking=float(braking), kicking=float(kicking),
                      gated=float(gated), cycle_t=run.t, spread=spread_avg, ball_w=w_avg, outliers=float(outliers),
-                     hold=hold_f,       # cycle_t: matches the per-cycle "t" of this step
+                     hold=hold_f, emergency=float(emergency), jumps=float(jumps), pushes=float(pushes),       # cycle_t: matches the per-cycle "t" of this step
                      r=np.sqrt(r), a_deck=a_deck, truth=io.ball_truth())
             show = (show + [p_meas])[-max(int(0.25 / run.dt), 1):]
             if i % 2 == 0:
@@ -1101,7 +1153,7 @@ def job_rail_balance(io, calib, ctx, seconds=60.0, gain=None, goal_mm=None, anch
                 target = np.zeros(2)
                 event = None
                 continue
-        run.log["stop_reason"] = [f"finished: ran the full {seconds:.0f} s"]
+        run.log["stop_reason"] = [f"finished: ran the full {seconds:.0f} s"]   # (an endless run only ends by STOP)
     except SafetyStop as e:
         ctx.log(f"STOP: {e}. Levelling the paddle.")
         run.log["stop_reason"] = [f"safety stop: {e}"]

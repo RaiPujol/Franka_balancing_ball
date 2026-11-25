@@ -332,7 +332,7 @@ def run_job(io, state, name, params):
                                                   float(params.get("anchor_mm", 0.0)), bool(params.get("anchor", True))),
         "rail_balance": lambda: (rail.set_cfg(c, {k: v for k, v in params.get("ctrl", {}).items() if k in rail.TUNABLE}),
                                  c.save(),
-                                 rail.job_rail_balance(io, c, state, float(params.get("seconds", 60)),
+                                 rail.job_rail_balance(io, c, state, float(params.get("seconds", 0)),
                                                        anchor_mm=float(params.get("anchor_mm", 0.0)),
                                                        anchor=bool(params.get("anchor", True)))),
         "balance": lambda: tm.job_balance(io, c, state, float(params.get("seconds", 30)),

@@ -6,7 +6,8 @@ import numpy as np
 
 import kin
 
-STREAM_SECONDS = 3600.0    # longest a single streaming skill may last before frankapy ends it (Runner renews it)
+STREAM_SECONDS = 21600.0   # longest a single streaming skill may last before frankapy ends it (Runner renews it at
+                           # prompts). 6 h: balancing now runs until STOP (it was 1 h)
 
 
 class FrankaIO:

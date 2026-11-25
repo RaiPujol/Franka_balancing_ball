@@ -29,6 +29,11 @@ sample**; **level trim −0.85°** by phone level (the balancing-log estimate of
 |---|---|---|
 | 21:43 | 41.7 s, then 2 fast drops (4.5 s, 7.3 s) | settings rolling gain 0.8, max ball speed 40, max tilt 1.5: the plate swung ±1.0° rms and the ball went ±60–100 mm every ~4 s (the 19:22 best run: ±0.2–0.3°, ±5–8 mm). The learned lean (−0.36°, learned during that swing) was carried into the re-placements and pushed the ball off the front within 3 s → lean reset on every re-placement again; preset back to the 19:22 values (rolling gain 1.0, 20 mm/s, 1.2°) keeping the end guard, hold and recovery fixes |
 
+| **21:52** | **94.6 s, no drop until a hard push**; 20 mm rms, plate 0.20° rms | the best run so far: the ball sits still when not pushed, and came back from 17 pushes up to ~70 mm/s (out to ±60 mm, back within 15 mm in 0.3–1.3 s). The last push (~250 mm/s) was lost: the outlier gate treated 0.5 s of consistent readings as spikes, so the estimate stayed at −16 mm while the ball reached the end → consistent readings that both joints agree on are now accepted at once; push detection in the filter; emergency brake up to 2.5° (twice the tilt rate). On the fake, on a ±115 mm rail: catches up to ~120 mm/s (110 without the brake); a 150 mm/s push cannot be caught (the readings lag ~0.15 s, the paddle needs ~0.2 s to tilt) |
+
+Settings of the 21:52 run: rolling gain 1.0, Kp 1.0, Kv 2.0, max ball speed 20 mm/s, max tilt 1.2°, look-ahead
+0.35 s, level −0.85°, still-ball hold 12 mm / 15 mm/s.
+
 Lesson: every time the controller was made more aggressive (lower rolling gain, higher ball speed or tilt) the plate
 swung more. The real rolling gain is probably near 1.0.
 

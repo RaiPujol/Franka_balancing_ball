@@ -473,6 +473,17 @@ class Runner:
             self._frozen = 0.0
             self.ctx.log("streaming renewed (long wait at a prompt)")
 
+    def flush_log(self):
+        """Save what is logged so far as <log>_partNN.npz and start a fresh log (long runs: memory stays bounded).
+        The final part is saved under the plain log name by stop()."""
+        self._part = getattr(self, "_part", 0) + 1
+        if self.log_name and self.log:
+            os.makedirs(LOG_DIR, exist_ok=True)
+            name = self.log_name.replace(".npz", f"_part{self._part:02d}.npz")
+            np.savez(name, **{k: np.array(v) for k, v in self.log.items()})
+            self.ctx.log(f"log part saved: {os.path.relpath(name, HERE)} (run continues)")
+        self.log = {}
+
     def _rec(self, **kw):
         for k, v in kw.items():
             if v is not None:

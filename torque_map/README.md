@@ -7,7 +7,7 @@ Everything runs from a web page.
 
 | | |
 |---|---|
-| **Best result so far** | ball held **55 s** without a drop, within about ±5–8 mm of the centre (iam-bruno, Nov 21 2026) |
+| **Best result so far** | **94.6 s** with no drop, recovering from small pushes; 20 mm rms (iam-bruno, Nov 24 2026) |
 | **Sensing noise** | about 4 mm per sample while the paddle moves, 100 samples per second |
 | **Ball** | solid, 74.5 mm, 193 g, in a rail of two sticks on a 233 mm printed deck |
 | **Robot station** | lab PC iam-bruno (172.26.18.213), control PC iam-snowwhite |
@@ -62,7 +62,8 @@ Do this once per mounting of the paddle or rail, and again after a reboot if the
 
 ## 3. Balance
 
-In section D press **Load recommended: smooth rail**, then **Start rail balancing**:
+In section D press **Load recommended: smooth rail**, then **Start rail balancing**. It runs **until you press
+STOP** (`seconds` = 0, the default; long runs save their log in 10-minute parts):
 
 1. *Ball OFF, Continue*: 2 s re-zero of the empty paddle.
 2. *Ball at C, Continue*: 2 s of readings fix the map offset (the anchor). Balancing starts with a 2 s soft start.
@@ -101,7 +102,9 @@ fake a 3 Nm reading). The rail map turns the remaining torque into a position; b
 
 **Filtering.** The Kalman filter predicts the ball with physics, `a = rolling gain · 5/7 g · sin(tilt)`, plus a
 slowly learned **lean** (whatever pushes the ball when the paddle is "level"). One-off jumps of more than 60 mm are
-skipped for up to 0.3 s. If the estimate and the raw reading disagree by more than 40 mm for 0.3 s, the estimate is
+skipped for up to 0.3 s, unless the last 5 readings agree with each other and both joints agree (then the ball really
+moved and the estimate jumps there). Six readings in a row on one side of the prediction (a push) open up the speed
+uncertainty so the filter catches up in about 0.1 s. If the estimate and the raw reading disagree by more than 40 mm for 0.3 s, the estimate is
 resynced to the (median) reading.
 
 **Controlling.** The ball is predicted `look-ahead` seconds ahead. Wanted speed `v* = −Kp·(p − goal)`, at most
@@ -115,6 +118,9 @@ resynced to the (median) reading.
   than `max ball speed`.
 - **Unstick**: a ball held at an end for 0.3 s gets a tilt ramp toward the centre (up to the max counter-angle) that
   ends **the moment the ball moves inward**.
+- **Emergency brake**: if the ball's stopping point at full normal tilt is past the rail end, brake with up to
+  `brake tilt` until it turns. With the filter's push detection this catches pushes up to ~120 mm/s on the fake
+  (110 mm/s without); faster pushes cannot be stopped on a ±110 mm rail.
 
 **Safety and recovery.** Hard limits stay on: max tilt, a joint window around the pose, a frozen-joint check, Franka
 reflexes. With `balance stops` off (default for experiments) saturation and off-rail readings do not end the run; a
@@ -134,6 +140,7 @@ drop or a press pauses it and asks for the ball.
 | **rolling gain** | 1.0 | real ball acceleration ÷ the 5/7 g model. A ball on two sticks rolls on a smaller radius and speeds up less. Too low: the plate over-swings. Too high: corrections are too weak |
 | **level trim** | from the phone level | where "level" is along the rail |
 | **hold mm, hold mm/s** | 12, 15 | still-ball hold (0 = off) |
+| **brake tilt** | 2.5° | emergency brake: a ball that would hit an end even at the max counter-angle is braked with up to this tilt (and twice the tilt rate) until it turns. 0 = off |
 | accel noise, offset drift | 0.2, 0.02 | Kalman filter: how fast it follows the ball / learns the lean |
 
 **Roll test** (measures the rolling gain and the lean directly): start it from a terminal with
