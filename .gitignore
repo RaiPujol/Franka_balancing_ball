@@ -14,3 +14,10 @@ output/
 .env.*
 *.pem
 *.key
+
+# torque_map: machine data stays on the robot PC
+torque_map/logs/
+torque_map/tm_calib.json
+torque_map/sim_tests/fake_logs/
+torque_balance/logs/
+torque_balance/calib.json

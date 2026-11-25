@@ -215,19 +215,33 @@ class AxisKF:
         self.dt = dt
         self.F = np.array([[1, dt, 0.5 * dt * dt], [0, 1, dt], [0, 0, 1]], dtype=float)
         self.B = np.array([0.5 * dt * dt, dt, 0.0])
-        g = self.B
-        self.Q = accel_noise ** 2 * np.outer(g, g) + np.diag([0, 0, dist_noise ** 2 * dt])
+        self.set_noise(accel_noise, dist_noise)
         self.reset()
+
+    def set_noise(self, accel_noise, dist_noise):
+        """Process noise: unmodelled ball acceleration (m/s^2) and how fast the disturbance
+        (level offset) may wander (m/s^2 per sqrt(s)). Can change while running."""
+        g = self.B
+        self.Q = accel_noise ** 2 * np.outer(g, g) + np.diag([0, 0, dist_noise ** 2 * self.dt])
 
     def reset(self, pos=0.0, pos_sigma=0.03):
         self.x = np.array([pos, 0.0, 0.0])
         self.P = np.diag([pos_sigma ** 2, 0.05 ** 2, 0.1 ** 2])
 
+    def predict(self, accel):
+        """Time update over one period with the known acceleration (no measurement)."""
+        self.x = self.F @ self.x + self.B * accel
+        self.P = self.F @ self.P @ self.F.T + self.Q
+        return self.x
+
     def step(self, accel, z, r):
         """Predict with the known tilt acceleration, then update with measured position z
         (variance r)."""
-        self.x = self.F @ self.x + self.B * accel
-        self.P = self.F @ self.P @ self.F.T + self.Q
+        self.predict(accel)
+        return self.update(z, r)
+
+    def update(self, z, r):
+        """Measurement update with position z (variance r)."""
         r = max(r, 0.005 ** 2)                # never trust a single sample to better than 5 mm
         innov = z - self.x[0]
         s = self.P[0, 0] + r
@@ -262,11 +276,12 @@ class Excitation:
             self.step = self.rng.uniform(-1.0, 1.0, 2)
         return self.amp * ramp * (0.5 * sine + 0.5 * self.step)
 
-def lqr_gain(dt, wc, gain):
+def lqr_gain(dt, wc, gain, qv=0.02):
     """Discrete LQR for one axis. State [ball position, ball velocity, tilt, tilt rate],
     input = tilt target. The tilt follows its target through the servo's second-order
     filter (bandwidth wc), so the controller knows about that lag instead of fighting it.
-    `gain` is roughly the tilt asked per metre of ball error [rad/m]."""
+    `gain` is roughly the tilt asked per metre of ball error [rad/m]; qv weighs ball speed
+    against position in the cost (more = more damping, slower)."""
     Ac = np.array([[0.0, 1.0, 0.0, 0.0],
                    [0.0, 0.0, ROLL_ACCEL, 0.0],
                    [0.0, 0.0, 0.0, 1.0],
@@ -276,7 +291,7 @@ def lqr_gain(dt, wc, gain):
     for _ in range(50):                       # fine Euler steps over one control period
         B = B + A @ Bc * (dt / 50)
         A = A + Ac @ A * (dt / 50)
-    Q = np.diag([1.0, 0.02, 0.0, 0.0])
+    Q = np.diag([1.0, qv, 0.0, 0.0])
     R = 1.0 / (gain * gain)
     P = Q.copy()
     for _ in range(5000):
@@ -286,3 +301,140 @@ def lqr_gain(dt, wc, gain):
             break
         P = P_new
     return K
+
+
+
+# ----------------------------------------------------------------------------- one axis (rail)
+class JointTiltServo:
+    """Tilt about ONE base axis with ONE wrist joint; every other joint keeps the balance pose.
+    For the rail balancer (rail.py):
+        axis "y" (rail left/right): joint 5 tilts about base x (tilt a, index 0)
+        axis "x" (rail forward/back): joint 6 tilts about base y (tilt b, index 1)
+    At the lab home pose these joint axes ARE the base axes, so no IK is needed and nothing
+    else moves. The tilt command goes through a critically damped filter (bandwidth wc) with
+    a hard rate cap, so the paddle moves in small steps every control period.
+
+    Same interface as TiltServo (q, cmd, dcmd, wc, tilt_max, R0, reset, step, measured_tilt)."""
+
+    JOINT = {"y": 4, "x": 5}
+    TILT = {"y": 0, "x": 1}
+
+    def __init__(self, q0, T_ee_paddle, dt, axis="y", tilt_max=np.radians(3.0), wc=6.0,
+                 rate_max=np.radians(4.0), lead=0.0, accel_max=np.radians(40.0),
+                 boost_max=np.radians(3.0), boost_rate=np.radians(6.0), joint=None, tilt_index=None):
+        self.q0 = np.asarray(q0, dtype=float).copy()
+        self.T_ee_paddle = T_ee_paddle
+        self.dt, self.tilt_max, self.wc, self.rate_max, self.lead = dt, tilt_max, wc, rate_max, float(lead)
+        # tilt ACCELERATION cap: hard tilt reversals shake the whole arm, and joint 3 (the y sensor)
+        # hears it: ~25 mNm of vibration below 5 deg/s^2, ~50 at 30, ~100 at 100, ~180 at 300 (Nov 20 logs)
+        self.accel_max = accel_max
+        # joint stiction compensation: the joint sticks and needs more torque than its impedance gives at
+        # the tilt limit (Nov 21: joint 5 sat 1.1-1.3 deg behind its target for 15 s, torque on the normal
+        # 62 Nm/rad line). While it is behind and not moving, push its command further; drain when it moves.
+        self.boost_max, self.boost_rate = boost_max, boost_rate
+        self.j = self.JOINT[axis] if joint is None else int(joint)
+        self.k = self.TILT[axis] if tilt_index is None else int(tilt_index)
+        T0, J0 = fk(self.q0, T_ee_paddle)
+        self.R0, self.p0 = T0[:3, :3].copy(), T0[:3, 3].copy()
+        self.s = J0[3 + self.k, self.j]          # tilt about the base axis per rad of the joint
+        if abs(self.s) < 0.94:
+            raise SafetyStop(f"joint {self.j + 1} axis is {np.degrees(np.arccos(min(1.0, abs(self.s)))):.0f} deg off the "
+                             "base axis: use the lab home pose (gripper down, joints 5 and 6 axes horizontal)")
+        self.reset()
+
+    def reset(self):
+        self.q = self.q0.copy()
+        self.cmd = np.zeros(2)
+        self.dcmd = np.zeros(2)
+        self.trim = np.zeros(2)                  # interface compatibility, unused
+        self.boost, self.stuck_t, self.m_hist = 0.0, 0.0, []
+
+    def step(self, target, measured=None):
+        k = self.k
+        t = float(np.clip(np.asarray(target, dtype=float)[k], -self.tilt_max, self.tilt_max))
+        dd = self.wc ** 2 * (t - self.cmd[k]) - 2.0 * self.wc * self.dcmd[k]
+        dd = float(np.clip(dd, -self.accel_max, self.accel_max))
+        self.dcmd[k] = np.clip(self.dcmd[k] + dd * self.dt, -self.rate_max, self.rate_max)
+        self.cmd[k] = np.clip(self.cmd[k] + self.dcmd[k] * self.dt, -self.tilt_max, self.tilt_max)
+        q_new = self.q0.copy()
+        q_new[self.j] = self.q0[self.j] + self.cmd[k] / self.s
+        q_send = q_new.copy()
+        q_send[self.j] += self.lead * (q_new[self.j] - self.q[self.j]) / self.dt   # impedance lag feed-forward
+        self.q = q_new
+        if measured is not None and self.boost_max > 0:
+            m = float(np.asarray(measured)[k])
+            behind = self.cmd[k] - m                          # tilt still to go
+            # moving: compared with 0.1 s ago (the lab robot state refreshes at ~28 Hz, so 3 of 4 reads repeat)
+            self.m_hist = (getattr(self, "m_hist", []) + [m])[-max(int(0.1 / self.dt), 2):]
+            moving = abs(m - self.m_hist[0]) > np.radians(0.03)
+            if abs(behind) > np.radians(0.3) and not moving:
+                self.stuck_t += self.dt
+                if self.stuck_t > 0.15:
+                    self.boost = float(np.clip(self.boost + np.sign(behind) * self.boost_rate * self.dt,
+                                               -self.boost_max, self.boost_max))
+            else:
+                self.stuck_t = 0.0
+                if abs(behind) < np.radians(0.15) or moving:
+                    self.boost *= 0.9                         # drains in ~0.2 s once it moves or catches up
+            q_send[self.j] += self.boost / self.s
+        return q_send
+
+    def measured_tilt(self, q):
+        q = np.asarray(q, dtype=float)
+        out = np.zeros(2)
+        out[self.k] = self.s * (q[self.j] - self.q0[self.j])
+        return out
+
+
+class RailFeatures:
+    """No-ball model regressors for one-joint runs (rail.py).
+
+    * the moving joint's angle (hand and paddle weight swing with it), its velocity history
+      and acceleration (reaction of the moving hand);
+    * for each SENSING joint, its own angle high-passed (minus its 0.2 s running mean). The
+      sensing joint's torque reading is the controller holding against tiny fast wiggles of
+      that joint (microradians, 3-25 Hz). The fast part of the angle predicts that noise and
+      cancels it without delay (Nov 20 sweep, joint 3: 60 -> 21 mNm). The ball moves slowly
+      and deflects the joint 40x more than the wiggle, so the high-pass leaves it in the
+      torque (map readings unchanged), apart from a short transient when it is placed.
+
+    FRESH SAMPLES ONLY: on the lab robot the state refreshes at about 28 Hz while the loop runs
+    at 100 Hz, so 3 of 4 reads repeat the last state. Velocity history, acceleration and the
+    running mean advance only when the state changes, with the real time since the last fresh
+    sample; repeats return the last features. (Before this, a repeat then a jump made the
+    acceleration spike 4x: one-sample torque spikes that tripped the contact stop.)
+    Stateful, so one instance per run (or per log replay)."""
+
+    VERSION = 2
+
+    HP_CLIP = 30e-6     # rad. The vibration cancel is fitted on 2-7 urad wiggles (sweep). A load change (ball hitting
+                        # an end, breaking free, landing) springs the arm 140-220 urad: times -13,700 Nm/rad that made
+                        # FAKE 2-4 Nm "contacts" and -1700 mm readings (Nov 21 19:40, three failures). Clip: no loss on
+                        # the sweep (joints 2/4 leftover 7/14 mNm either way), at most ~0.4 Nm from this term.
+
+    def __init__(self, q0, dt, j, sense, hp_tc=0.2, hp_clip=None):
+        self.q0, self.dt, self.j = np.asarray(q0, dtype=float), dt, j
+        self.sense = list(sense)
+        self.hp_tc = hp_tc
+        self.hp_clip = self.HP_CLIP if hp_clip is None else hp_clip
+        self.m, self.vh, self.q_last, self.phi, self.n_since = None, [], None, None, 0
+
+    def __call__(self, q, vel_hist):
+        q = np.asarray(q, dtype=float)
+        self.n_since += 1
+        if self.phi is not None and np.array_equal(q, self.q_last):
+            return self.phi                          # repeated state: nothing new
+        dt_f = self.n_since * self.dt if self.q_last is not None else self.dt
+        self.n_since, self.q_last = 0, q.copy()
+        j = self.j
+        self.vh = ([float(vel_hist[0][j])] + self.vh)[:3]
+        while len(self.vh) < 3:
+            self.vh.append(self.vh[-1])
+        a = (self.vh[0] - self.vh[1]) / dt_f
+        qs = q[self.sense]
+        if self.m is None:
+            self.m = qs.copy()
+        self.m = self.m + min(1.0, dt_f / self.hp_tc) * (qs - self.m)
+        d = q[j] - self.q0[j]
+        self.phi = np.r_[1.0, d, d * d, self.vh, a, np.clip(qs - self.m, -self.hp_clip, self.hp_clip)]
+        return self.phi

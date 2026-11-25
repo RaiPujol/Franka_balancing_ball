@@ -39,7 +39,7 @@ DEFAULT_POINTS = [
     {"name": "FL", "x": 226.29, "y": 105.6},
     {"name": "FR", "x": 226.29, "y": -102.2},
 ]
-GAIN_SCALES = {"1": 1.0, "2": 2.0}          # wrist stiffness: frankapy default, or twice as stiff
+GAIN_SCALES = {"1": 1.0, "2": 2.0, "3": 3.0}  # wrist stiffness: frankapy default, or 2x / 3x as stiff
 
 
 def to_paddle(x_mm, y_mm):
@@ -68,11 +68,19 @@ class Calib:
         self.frame = "grip"                     # point x measured from the grip point
         self.wrist_scale = 1.0                  # 1 = frankapy default gains on joints 5-7
         self.joint_watch = "warn"               # "warn": log a lagging wrist joint and carry on; "stop": stop
+        # rail balancing (rail.py): ball in a rail along one paddle axis, one wrist joint tilts
+        self.rail_cfg = None                    # settings, see rail.DEFAULT_CFG (None = defaults)
+        self.rail_points = None                 # rail map points, mm from C along the rail (None = defaults)
+        self.railmap_raw = None                 # recordings of the last rail map
+        self.railmap = None                     # 1-D map fitted from them
+        self.railtare_W = None                  # no-ball model from the rail tilt sweep
+        self.railtare_sigma = None
+        self.railtare_cfg = None                # settings the rail tilt sweep ran with
 
     # -- persistence
     def to_json(self):
         d = {k: v for k, v in self.__dict__.items()}
-        for k in ("q0", "tare_W", "tare_sigma"):
+        for k in ("q0", "tare_W", "tare_sigma", "railtare_W", "railtare_sigma"):
             if d[k] is not None:
                 d[k] = np.asarray(d[k]).tolist()
         return d
@@ -90,7 +98,7 @@ class Calib:
             for k, v in d.items():
                 if hasattr(c, k):
                     setattr(c, k, v)
-            for k in ("q0", "tare_W", "tare_sigma"):
+            for k in ("q0", "tare_W", "tare_sigma", "railtare_W", "railtare_sigma"):
                 if getattr(c, k) is not None:
                     setattr(c, k, np.array(getattr(c, k), dtype=float))
             if "frame" not in d:
@@ -144,6 +152,20 @@ def job_go_home(io, calib, ctx):
     return _use_pose(io, calib, ctx)
 
 
+def job_goto_saved(io, calib, ctx):
+    """Move back to the SAVED balance pose (all seven joints, hand facing forward). Keeps every
+    calibration (unlike job_go_home, which takes the lab home pose and clears them)."""
+    _need_pose(calib)
+    ctx.status("moving to the saved balance pose")
+    io.goto(np.array(calib.q0, dtype=float), 5.0)
+    io.wait(0.5)
+    q = np.asarray(io.read()["q"], dtype=float)
+    err = np.degrees(np.max(np.abs(q - np.asarray(calib.q0))))
+    rep = pose_report(q)
+    ctx.log(f"at the saved balance pose (largest joint difference {err:.2f} deg; paddle {rep['paddle_from_level_deg']:.1f} deg "
+            f"from level by the model). Calibration kept.")
+
+
 def job_guide(io, calib, ctx, seconds=30.0):
     ctx.status(f"guide mode for {seconds:.0f} s: move the arm by hand, then let go")
     io.guide(seconds)
@@ -182,6 +204,7 @@ def _use_pose(io, calib, ctx):
     # a new pose invalidates everything learned at the old one
     calib.empty = calib.empty_end = calib.fit = calib.tare_W = calib.tare_sigma = None
     calib.readings = {}
+    calib.railmap = calib.railmap_raw = calib.railtare_W = calib.railtare_sigma = calib.railtare_cfg = None
     calib.save()
     ctx.log(f"balance pose saved. joint 5 axis {rep['j5_axis_from_horizontal_deg']:.1f} deg and joint 6 axis "
             f"{rep['j6_axis_from_horizontal_deg']:.1f} deg from horizontal, paddle {rep['paddle_from_level_deg']:.1f} "
@@ -297,37 +320,54 @@ class Runner:
     """A streaming session: the paddle under the joint impedance controller, tilted by the
     wrist servo, with every safety check from the earlier package."""
 
-    def __init__(self, io, calib, ctx, log_name):
+    def __init__(self, io, calib, ctx, log_name, rate_hz=None, servo=None, tare="calib", features=None, q0=None):
+        """rate_hz, servo, tare, features: overrides for the one-axis rail mode (rail.py). By default
+        the 2-axis set-up: calib.rate_hz, TiltServo, the tilt-sweep tare, motion_features."""
         _need_pose(calib)
         self.io, self.calib, self.ctx = io, calib, ctx
-        self.dt = 1.0 / calib.rate_hz
+        self.q0 = np.asarray(calib.q0 if q0 is None else q0, dtype=float)    # the pose this run streams around
+        self.rate_hz = float(rate_hz or calib.rate_hz)
+        self.dt = 1.0 / self.rate_hz
         self.k_gains, self.d_gains = calib.gains
-        self.servo = TiltServo(calib.q0, calib.T_paddle, self.dt, calib.tilt_max, lead=self.d_gains / self.k_gains)
+        self.servo = servo or TiltServo(calib.q0, calib.T_paddle, self.dt, calib.tilt_max, lead=self.d_gains / self.k_gains)
         self.P2 = self.servo.R0[:2, :2]           # paddle x, y in the base frame
-        self.tare = Tare(calib.tare_W.copy(), calib.tare_sigma.copy()) if calib.tare_W is not None else None
+        if isinstance(tare, str):
+            tare = Tare(calib.tare_W.copy(), calib.tare_sigma.copy()) if calib.tare_W is not None else None
+        self.tare = tare
+        q0 = np.asarray(calib.q0, dtype=float)
+        self.features = features or (lambda q, vel: motion_features(q[4:7] - q0[4:7], vel))
         self.log, self.log_name = {}, log_name
         self.t = 0.0
 
     def start(self):
-        rep = pose_report(self.calib.q0)
+        rep = pose_report(self.q0)
         if rep["paddle_from_level_deg"] > 10:
             raise SafetyStop("paddle is far from level at the saved pose: check the mount constants in kin.py")
-        self.io.goto(self.calib.q0, 4.0)
+        self.io.goto(self.q0, 4.0)
         self.servo.reset()
         self._vel, self._vz, self._late, self.accel_z = [], None, np.zeros(3), 0.0
+        self._frozen, self._last_status = 0.0, -1e9
+        self._q_last, self._tau_last, self.fresh, self.n_fresh = None, None, True, 0
         self.lag_events, self._last_warn = 0, -1e9
-        self.io.start_stream(self.calib.q0, self.k_gains, self.d_gains)
+        if hasattr(self.io, "set_rate"):
+            self.io.set_rate(self.rate_hz)
+        self.io.start_stream(self.q0, self.k_gains, self.d_gains)
+        self._stream_started = self.io.clock()
 
     def stop(self):
         if getattr(self, "lag_events", 0):
             self.ctx.log(f"wrist joints lagged their targets {self.lag_events} times in this run (see the log file)")
         try:
-            for _ in range(int(1.0 / self.dt)):
+            for _ in range(int(2.0 / self.dt)):          # level the paddle (slew-limited servos need up to ~1 s)
                 self.io.command(self.servo.step([0.0, 0.0]))
         finally:
             self.io.stop_stream()
+            if hasattr(self.io, "set_rate") and self.rate_hz != self.calib.rate_hz:
+                self.io.set_rate(self.calib.rate_hz)
             if self.log_name and self.log:
                 os.makedirs(LOG_DIR, exist_ok=True)
+                if "stop_reason" not in self.log and self.ctx.cancelled():
+                    self.log["stop_reason"] = ["STOP button on the page"]
                 np.savez(self.log_name, **{k: np.array(v) for k, v in self.log.items()})
                 self.ctx.log(f"log saved: {os.path.relpath(self.log_name, HERE)}")
 
@@ -338,16 +378,37 @@ class Runner:
         q = np.asarray(state["q"], dtype=float)
         dq = np.asarray(state["dq"], dtype=float)
         tau = np.asarray(state["tau"], dtype=float)
+        # the lab robot state refreshes at ~28 Hz: flag the cycles that bring a NEW state
+        self.fresh = self._q_last is None or not (np.array_equal(q, self._q_last) and np.array_equal(tau, self._tau_last))
+        self._q_last, self._tau_last = q, tau
+        self.n_fresh += int(self.fresh)
         self._vel = ([dq] + self._vel)[:LAGS + 1]
         while len(self._vel) < LAGS + 1:
             self._vel.append(self._vel[-1])
-        phi = motion_features(q[4:7] - self.calib.q0[4:7], self._vel)
+        phi = self.features(q, self._vel)
         _, J = fk(q, self.calib.T_paddle)
         vz = J[2] @ dq
         self.accel_z = 0.0 if self._vz is None else (vz - self._vz) / self.dt
         self._vz = vz
         if np.max(np.abs(q - self.servo.q)) > 0.12:
             raise SafetyStop("arm is not following the command (blocked or pushed?)")
+        # robot stopped executing (streaming skill ended, reflex, user stop): the wrist target moves
+        # away but NOTHING moves and nobody pushes. Seen on Nov 20 22:55 (frozen 8 s, torque fell to 0).
+        # judged on the joint that should be moving (noise on the others kept this from firing on Nov 21 00:01)
+        jm = getattr(self.servo, "j", None)
+        js = [jm] if jm is not None else [4, 5, 6]
+        if np.degrees(np.max(np.abs(q[js] - self.servo.q[js]))) > 0.5 and np.degrees(np.max(np.abs(dq[js]))) < 0.1:
+            self._frozen += self.dt
+        else:
+            self._frozen = 0.0
+        if self._frozen > 0.4 and self.t - self._last_status > 0.5:
+            self._last_status = self.t
+            why = self.io.stream_status() if hasattr(self.io, "stream_status") else None
+            boost_full = abs(getattr(self.servo, "boost", 0.0)) >= 0.95 * getattr(self.servo, "boost_max", 0.0)
+            if why or (self._frozen > 4.0 and (boost_full or not hasattr(self.servo, "boost"))):
+                raise SafetyStop(f"the robot stopped executing the commands at t={self.t:.1f} s "
+                                 f"({why or 'the tilting joint stayed stuck 4 s even with the full stiction push'}). Check the terminal and Desk, "
+                                 "release the user stop / recover errors, then start again")
         err = np.abs(q[4:7] - self.servo.q[4:7])
         self._late = np.where(err > TRACK_TOL, self._late + self.dt, 0.0)
         if np.any(self._late > TRACK_TIME) and self.calib.joint_watch != "stop":
@@ -365,19 +426,19 @@ class Runner:
             self._rec(t=self.t, q=q, tau=tau, q_target=self.servo.q.copy())
             raise SafetyStop(
                 f"joint {j} is not following its target at t={self.t:.1f} s: target "
-                f"{np.degrees(self.servo.q[i] - self.calib.q0[i]):+.2f} deg, actual {np.degrees(q[i] - self.calib.q0[i]):+.2f} "
+                f"{np.degrees(self.servo.q[i] - self.q0[i]):+.2f} deg, actual {np.degrees(q[i] - self.q0[i]):+.2f} "
                 f"deg (from the balance pose), torque {tau[i]:+.2f} Nm, velocity {np.degrees(dq[i]):+.1f} deg/s. "
                 "Something blocks it (paddle, cable), the joint sticks, or a joint fault. Run the track test, "
                 "check Desk for errors, and send the log.")
         tilt = self.servo.measured_tilt(q)
         q_des = self.servo.step(tilt_target, tilt)
-        if np.max(np.abs(q_des - self.calib.q0)) > 0.35 or np.any(q_des < JOINT_MIN + 0.02) \
+        if np.max(np.abs(q_des - self.q0)) > 0.35 or np.any(q_des < JOINT_MIN + 0.02) \
                 or np.any(q_des > JOINT_MAX - 0.02):
             raise SafetyStop("joint target left the allowed window around the balance pose")
         self.io.command(q_des)
         self.t += self.dt
         self._rec(t=self.t, q=q, tau=tau, tilt=tilt, tilt_cmd=self.servo.cmd.copy(), q_target=self.servo.q.copy(),
-                  dq=dq, **extra)
+                  dq=dq, fresh=float(self.fresh), tau_ext=state.get("tau_ext"), wrench=state.get("wrench"), **extra)
         return q, dq, tau, phi, tilt, J
 
     def hold(self, seconds, settle=1.0):
@@ -396,6 +457,21 @@ class Runner:
         while not self.ctx.answered():
             q, _, tau, _, _, _ = self.cycle([0.0, 0.0])
             self.ctx.live(tau=tau, q=q)
+            self._renew_stream()
+
+    def _renew_stream(self):
+        """frankapy ends a streaming skill after its duration (robot_io.STREAM_SECONDS). Waiting at a prompt
+        for longer must not let it expire (Nov 21 01:09: a sweep waited 45 min, then the arm ignored
+        every command). Renew it while the paddle is held level, well before the limit."""
+        import robot_io
+        limit = getattr(robot_io, "STREAM_SECONDS", 600.0)
+        if self.io.clock() - getattr(self, "_stream_started", self.io.clock()) > 0.8 * limit and \
+                np.max(np.abs(self.servo.cmd)) < np.radians(0.05):
+            self.io.stop_stream()
+            self.io.start_stream(self.servo.q, self.k_gains, self.d_gains)
+            self._stream_started = self.io.clock()
+            self._frozen = 0.0
+            self.ctx.log("streaming renewed (long wait at a prompt)")
 
     def _rec(self, **kw):
         for k, v in kw.items():

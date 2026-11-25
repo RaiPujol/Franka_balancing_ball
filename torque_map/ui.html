@@ -58,8 +58,11 @@ td input { width: 76px; font: inherit; padding: 4px 6px; border: 1px solid var(-
 td input.name { width: 54px; }
 label { color: var(--ink2); }
 label input, label select { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 72px; }
-#prompt { display: none; margin: 10px 16px 0; padding: 12px 14px; border-radius: 10px; background: #fff4d6; color: #5c4400;
-  border: 1px solid #f1d27a; font-weight: 600; align-items: center; gap: 12px; flex-wrap: wrap; }
+#prompt { display: none; position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 50; padding: 14px 16px;
+  border-radius: 12px; background: #fff4d6; color: #5c4400; border: 2px solid #f1d27a; font-weight: 600;
+  align-items: center; gap: 12px; flex-wrap: wrap; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+#prompt button { font-size: 16px; padding: 10px 22px; }
+body.prompting { padding-bottom: 120px; }   /* keep the page bottom reachable above the floating bar */
 @media (prefers-color-scheme: dark) { #prompt { background: #3d3110; color: #f6dc93; border-color: #6b561a; } }
 #prompt.on { display: flex; }
 #prompt span { flex: 1; min-width: 200px; }
@@ -80,11 +83,13 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
   <span class="safety">Partner on the e-stop for anything marked MOVES</span>
   <button class="stop" id="stopBtn" onclick="post('/api/cancel')">STOP</button>
 </header>
+<div id="stale" style="display:none;margin:10px 16px 0;padding:10px 14px;border-radius:10px;background:var(--bad);color:#fff;font-weight:600"></div>
 <div id="prompt"><span id="promptMsg"></span><button class="primary" onclick="post('/api/continue')">Continue</button></div>
 <nav>
   <button data-tab="t1" class="on">1 · Init</button>
   <button data-tab="t2">2 · Torque map</button>
   <button data-tab="t3">3 · Balance</button>
+  <button data-tab="tx">Rail · one axis</button>
 </nav>
 <main>
 <!-- ============================ 1 INIT ============================ -->
@@ -95,7 +100,8 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
       <p class="hint">Gripper straight down, paddle level, joints 5 and 6 axes horizontal (each sees the ball at full
         sensitivity and tilts the paddle one way). The lab home pose does this.</p>
       <div class="row">
-        <button class="primary moves" data-job="go_home">Go to balance pose</button>
+<button class="primary moves" data-job="goto_saved" title="all joints back to the saved balance pose (hand facing forward); keeps every calibration">Go to SAVED balance pose</button>
+        <button class="moves" data-job="go_home" title="lab home pose; this CLEARS the saved pose and all calibration">Go to lab home (resets calibration)</button>
       </div>
       <div class="row">
         <button data-job="guide" data-params='{"seconds":30}'>Guide mode 30 s</button>
@@ -124,7 +130,7 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
       <h3>Settings</h3>
       <div class="row"><label>max tilt (deg) <input id="tiltMax" type="number" step="0.5" min="1" max="6"></label>
         <label>joint errors <select id="jointWatch"><option value="warn">warn, keep going</option><option value="stop">stop</option></select></label>
-        <label>wrist stiffness <select id="wristScale"><option value="1">default (frankapy)</option><option value="2">2x stiffer</option></select></label>
+        <label>wrist stiffness <select id="wristScale"><option value="1">default (frankapy)</option><option value="2">2x stiffer</option><option value="3">3x stiffer</option></select></label>
         <button onclick="post('/api/settings',{tilt_max_deg: +el('tiltMax').value, wrist_scale: el('wristScale').value, joint_watch: el('jointWatch').value})">Save</button></div>
       <p class="hint">Changing the stiffness clears the tilt sweep (redo it before balancing).</p>
     </div>
@@ -211,6 +217,155 @@ canvas { width: 100%; height: 170px; display: block; border: 1px solid var(--lin
     </div>
   </div>
 </section>
+<!-- ============================ RAIL (one axis) ============================ -->
+<section class="tab" id="tx">
+  <div class="grid">
+    <div>
+      <h2>Balance along one axis (ball in a rail)</h2>
+      <p class="hint">Rail along <b>y</b> (left/right): joint 5 alone tilts the paddle, in small steps at 100&nbsp;Hz.
+        <b>Joint 3</b> tells where the ball is: it holds still, so its error is plain noise that the Kalman filter removes
+        (joint 5's own torque follows its motion and drifts). Rail along x: joint 6 tilts, joints 2 and 4 sense.
+        Needs the balance pose and the level paddle from tab 1. Order: A, B, C, D.</p>
+      <h3>Settings</h3>
+      <div class="card" id="rcfgCard">
+        <div class="row">
+          <label>rail along <select id="r_axis" style="width:150px"><option value="y">y (left/right), joint 5</option><option value="x">x (forward/back), joint 6</option></select></label>
+          <label title="turned: joint 7 rotates the paddle 90 deg, so a y rail points toward the robot and joints 2 + 4 sense it">hand
+            <select id="r_yaw" style="width:150px"><option value="0">normal</option><option value="-90">turned 90° (y rail → joints 2+4)</option></select></label>
+                    <label>rate <select id="r_rate_hz"><option value="50">50 Hz</option><option value="100">100 Hz</option></select></label>
+        </div>
+        <div class="row">
+          <label>wrist stiffness <select id="r_wrist"><option value="1">default</option><option value="2">2x</option><option value="3">3x</option></select></label>
+          <span class="hint" style="margin:0">sense on</span><span id="r_chs"></span>
+        </div>
+        <div class="row">
+          <label>rail points, mm from C <input id="r_points" style="width:200px"></label>
+          <span class="hint" style="margin:0" id="r_pointsHint"></span>
+        </div>
+        <div class="row"><button onclick="saveRail()">Save settings</button><span class="hint" id="rcfgState"></span></div>
+        <p class="hint" style="margin:0">Changing the axis or the hand pose clears the rail map and sweep (the arm turns joint 7 at the next run). Changing rate or stiffness needs a new sweep (C).</p>
+      </div>
+      <h3>A · Track test (no ball)</h3>
+      <p class="hint">The tilting joint rocks alone for 20 s: checks the tilt follows the command.</p>
+      <div class="row"><button class="primary moves" data-r="rail_track">Run rail track test</button></div>
+      <h3>B · Rail map</h3>
+      <p class="hint">Streams level and asks, in the yellow bar: ball off, then the ball <b>held still</b> at each rail point
+        (putty, a washer or a stick against it), hands off, then ball off again.</p>
+      <div class="row"><label>seconds per point <input id="r_recsec" type="number" value="3" min="1" max="20"></label>
+        <button class="primary moves" data-r="rail_map">Record rail map</button>
+        <button data-r="rail_fit">Re-fit</button></div>
+      <div class="card kv" id="rmapCard"></div>
+      <h3>C · Tilt sweep (no ball)</h3>
+      <div class="row"><button class="primary moves" data-r="rail_sweep">Run rail tilt sweep (40 s)</button>
+        <span class="hint" id="rsweepState"></span></div>
+      <h3>D · Balance (tune live)</h3>
+      <div class="row">
+        <label>seconds <input id="r_sec" type="number" value="60" min="5" max="600"></label>
+        <span class="hint" style="margin:0" id="tuneState">changes apply immediately, also while balancing</span>
+      </div>
+      <div class="card" id="rctlCard">
+        <div class="row">
+          <button onclick="loadPreset('lqr')" title="LQR gain 0.6, speed weight 0.1, max 2.5 deg, look-ahead 0.15 s, stiction 0.8 deg, unstick on">Load recommended: LQR</button>
+          <button onclick="loadPreset('smooth')" title="smooth rail: PD Kp 1, Kv 2, max ball speed 20 mm/s, max 1.2 deg, look-ahead 0.35 s, no stiction model (best real result on Nov 21)">Load recommended: smooth rail</button>
+          <button onclick="loadPreset('pd')" title="sticky rail: Kp 2, Kv 3, max ball speed 30 mm/s, max 2.5 deg, look-ahead 0.35 s, ramping kick 1.2 deg at 3 deg/s">Load recommended: PD</button>
+        </div>
+        <div class="row">
+          <label>controller <select data-t="ctrl" style="width:150px"><option value="pd">PD + speed limit</option><option value="lqr">LQR</option></select></label>
+          <label>goal, mm from C <input data-t="goal_mm" type="number" step="5" min="-60" max="60"></label>
+        </div>
+        <div class="row tpd">
+          <label title="wanted ball speed per metre from the goal">Kp 1/s <input data-t="kp" type="number" step="0.1" min="0.05" max="20"></label>
+          <label title="counter-angle per m/s of speed error">Kv 1/s <input data-t="kv" type="number" step="0.1" min="0.2" max="50"></label>
+          <label title="never ask the ball to move faster">max ball speed mm/s <input data-t="vmax_mm_s" type="number" step="5" min="5" max="1000"></label>
+        </div>
+        <div class="row tlqr">
+          <label title="about the tilt asked per metre of error">LQR gain rad/m <input data-t="lqr_gain" type="number" step="0.1" min="0.05" max="20"></label>
+          <label title="weight on ball speed vs position: more = more damping">speed weight <input data-t="lqr_qv" type="number" step="0.05" min="0" max="20"></label>
+        </div>
+        <div class="row">
+          <label>max counter-angle ° <input data-t="tilt_max_deg" type="number" step="0.25" min="0.5" max="5"></label>
+          <label title="predict the ball this far ahead (arm + filter delay)">look-ahead s <input data-t="lead_s" type="number" step="0.05" min="0" max="1"></label>
+          <label title="integral: slowly adds tilt while the ball stays on one side (cancels a paddle that is not level)">Ki rad/(m·s) <input data-t="ki" type="number" step="0.1" min="0" max="20"></label>
+          <label title="most tilt the integral may add">Ki max ° <input data-t="ki_max_deg" type="number" step="0.25" min="0" max="5"></label>
+        </div>
+        <div class="row">
+          <label title="command filter bandwidth">tilt filter rad/s <input data-t="wc" type="number" step="1" min="2" max="30"></label>
+          <label title="cap on how fast the tilt may change">max tilt rate °/s <input data-t="rate_max_dps" type="number" step="1" min="0.5" max="30"></label>
+          <label title="cap on how hard the tilt may speed up / slow down: jerky tilts shake the arm and drown the ball signal">max tilt accel °/s² <input data-t="accel_max_dps2" type="number" step="5" min="5" max="5000"></label>
+          <label title="real ball acceleration divided by the 5/7 g sin(tilt) model. A ball on two sticks rolls on a smaller radius and speeds up less. Measure it with the roll test">rolling gain × <input data-t="roll_scale" type="number" step="0.05" min="0.2" max="1.5"></label>
+        </div>
+        <h3 style="margin-top:8px">Sticky rail</h3>
+        <div class="row">
+          <label title="brake at full counter-angle when the ball would otherwise stop past the margin"><input data-t="brake_zone" type="checkbox" style="width:auto"> brake zone</label>
+          <label>stop by mm <input data-t="brake_margin_mm" type="number" step="5" min="10" max="79"></label>
+        </div>
+        <div class="row">
+          <label title="ball still and off the goal: tilt at least this much toward the goal (0 = off)">kick ° <input data-t="kick_deg" type="number" step="0.1" min="0" max="5"></label>
+          <label title="no kicks inside this distance from the goal">deadband mm <input data-t="deadband_mm" type="number" step="1" min="0" max="50"></label>
+          <label title="still-ball hold: inside this distance from the goal (and slower than the hold speed) the paddle eases to level instead of chasing noise. 0 = off">hold mm <input data-t="hold_mm" type="number" step="1" min="0" max="50"></label>
+          <label title="still-ball hold speed: slower than this (and inside hold mm) the paddle eases to level">hold mm/s <input data-t="hold_mm_s" type="number" step="1" min="0" max="100"></label>
+          <label title="filter: a still ball stays put below this tilt (0 = off)">stick ° <input data-t="stick_deg" type="number" step="0.1" min="0" max="3"></label>
+          <label title="reactive mode: ignore the torque reading while the tilt accelerates harder than this (0 = off)">gate °/s² <input data-t="gate_accel_dps2" type="number" step="10" min="0" max="5000"></label>
+        </div>
+        <h3 style="margin-top:8px">Kalman filter</h3>
+        <div class="row">
+          <label title="unexplained ball acceleration allowed: more = follows faster, noisier">accel noise m/s² <input data-t="kf_accel" type="number" step="0.01" min="0.005" max="1"></label>
+          <label title="x the measurement noise: more = trusts the torque reading less">meas. noise × <input data-t="kf_r_scale" type="number" step="0.1" min="0.1" max="10"></label>
+          <label><input data-t="kf_adapt" type="checkbox" style="width:auto"> learn noise</label>
+        </div>
+        <div class="row">
+          <label title="how fast the level-offset estimate may wander">offset drift <input data-t="kf_bias" type="number" step="0.005" min="0" max="0.2"></label>
+          <label title="largest level offset it may believe">max offset ° <input data-t="kf_bias_max_deg" type="number" step="0.25" min="0" max="3"></label>
+        </div>
+        <h3 style="margin-top:8px">Level</h3>
+        <div class="row">
+          <label title="where level is for the tilting joint at the rail pose. Run the Probe, put a phone level on the deck along the rail, and change this until it reads 0 (and a ball at C stays put)">level trim ° <input data-t="level_trim_deg" type="number" step="0.1" min="-3" max="3"></label>
+          <button onclick="trimBy(-0.1)">−0.1°</button><button onclick="trimBy(0.1)">+0.1°</button>
+          <span class="hint" style="margin:0">live: run the Probe, phone level on the deck along the rail</span>
+        </div>
+        <h3 style="margin-top:8px">Testing</h3>
+        <div class="row">
+          <label title="off: no saturation stop and no ball-off-the-rail stop. The tilt limit, joint window, contact and frozen-robot stops stay.">
+            <input data-t="balance_stops" type="checkbox" style="width:auto"> balance stops (saturation, ball off the rail)</label>
+          <span class="hint" style="margin:0">untick to test aggressive gains; partner on the e-stop</span>
+        </div>
+        <h3 style="margin-top:8px">Rail ends</h3>
+        <div class="row">
+          <label><input data-t="end_clamp" type="checkbox" style="width:auto"> stop the estimate at the ends (freeze the offset there)</label>
+        </div>
+        <div class="row">
+          <label><input data-t="unstick" type="checkbox" style="width:auto"> unstick: ramp the counter-angle when the ball sits at an end</label>
+          <label>ramp °/s <input data-t="unstick_dps" type="number" step="0.25" min="0.1" max="10"></label>
+        </div>
+        <p class="hint" style="margin:6px 0 0">Ball shoots past the goal: lower <i>max ball speed</i> or raise Kv (LQR: raise speed weight).
+          Sluggish: raise Kp (LQR: raise gain). Twitchy: lower Kv, or lower <i>accel noise</i>. Estimate lags the ball: raise
+          <i>accel noise</i> or <i>look-ahead</i>.</p>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="r_anchor" checked style="width:auto"> anchor at start: ball placed at</label>
+        <label><input id="r_anchor_mm" type="number" value="0" step="5" min="-80" max="80"> mm</label>
+      </div>
+      <div class="row"><button class="moves" data-r="rail_probe">Probe (no balancing)</button>
+        <button class="primary moves" data-r="rail_balance">Start rail balancing</button></div>
+      <p class="hint"><b>Probe</b>: the paddle stays level for 40 s and shows the estimate the balancer would use. Move the ball slowly
+        along the rail with a stick: the estimate should follow it. Do this first if balancing stops or oscillates.</p>
+      <p class="hint">Asks for the ball off (2 s re-zero), then for the ball at the anchor mark: 2 s of readings there fix the
+        map offset. <b>While balancing, click the rail drawing where the ball really is</b> (or the button) to correct the estimate.</p>
+      <div class="row"><button id="r_atGoal" onclick="anchorAt(S.rail.cfg.goal_mm || 0)">Ball is at the goal now</button></div>
+    </div>
+    <div>
+      <h2>Deck and rail (seen from above, robot at the bottom)</h2>
+      <svg class="deck" id="rdeck" viewBox="-150 -140 290 300" style="cursor:crosshair"></svg>
+      <p class="hint" id="rdeckHint">While balancing: click where the ball really is.</p>
+      <h2 style="margin-top:14px">Ball along the rail, from C</h2>
+      <div class="legend"><span><i style="background:var(--c5)"></i>estimate (mm)</span><span><i style="background:var(--c6)"></i>raw reading, 0.25 s average (mm)</span></div>
+      <canvas id="cR" width="900" height="340"></canvas>
+      <h2 style="margin-top:14px">Tilt of the rail axis</h2>
+      <div class="legend"><span><i style="background:var(--c5)"></i>measured (deg)</span><span><i style="background:var(--c6)"></i>command (deg)</span></div>
+      <canvas id="cRT" width="900" height="340"></canvas>
+    </div>
+  </div>
+</section>
 </main>
 <div id="log"></div>
 
@@ -246,6 +401,155 @@ function startBalance() {
   if (!confirm('The arm will MOVE and balance. Partner on the e-stop, everyone clear of the table?')) return;
   trail = [];
   post('/api/run', {job: 'balance', params: {seconds: +el('balSec').value, gain: +el('balGain').value, axis: el('balAxis').value}});
+}
+
+// ------------------------------------------------------------------ rail (one axis)
+let rFilled = false;
+const JN = j => 'joint ' + (j + 1);
+function rParams(job) {
+  if (job === 'rail_map') return {seconds: +el('r_recsec').value || 3};
+  if (job === 'rail_probe') return {seconds: 40, anchor: el('r_anchor').checked, anchor_mm: +el('r_anchor_mm').value || 0};
+  if (job === 'rail_balance') return {seconds: +el('r_sec').value || 60, anchor: el('r_anchor').checked,
+                                      anchor_mm: +el('r_anchor_mm').value || 0, ctrl: tuneValues()};
+  return {};
+}
+document.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => {
+  const job = b.dataset.r;
+  if (b.classList.contains('moves') && !confirm('The arm will MOVE. Partner on the e-stop, everyone clear of the table?')) return;
+  post('/api/run', {job, params: rParams(job)});
+}));
+function anchorAt(pmm) {
+  if (!S || (S.busy !== 'rail_balance' && S.busy !== 'rail_probe')) return;
+  post('/api/anchor', {p_mm: Math.max(-90, Math.min(90, pmm))});
+}
+el('rdeck').addEventListener('click', ev => {
+  if (!S || (S.busy !== 'rail_balance' && S.busy !== 'rail_probe')) return;
+  const svg = el('rdeck'), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  const u = pt.matrixTransform(svg.getScreenCTM().inverse());       // deck mm: x = -paddle y, y = -paddle x
+  anchorAt(Math.round(S.rail.cfg.axis === 'y' ? -u.x : -u.y));
+});
+// live tuning: every [data-t] input is one TUNABLE setting; a change is sent at once (and saved)
+function tuneValue(i) { return i.type === 'checkbox' ? i.checked : (i.tagName === 'SELECT' ? i.value : +i.value); }
+function tuneValues() { const o = {}; document.querySelectorAll('[data-t]').forEach(i => o[i.dataset.t] = tuneValue(i)); return o; }
+function showMode() {
+  const lqr = document.querySelector('[data-t="ctrl"]').value === 'lqr';
+  document.querySelectorAll('.tpd').forEach(r => r.style.display = lqr ? 'none' : '');
+  document.querySelectorAll('.tlqr').forEach(r => r.style.display = lqr ? '' : 'none');
+}
+document.querySelectorAll('[data-t]').forEach(i => i.addEventListener('change', async () => {
+  if (i.type === 'number' && (i.value === '' || !isFinite(+i.value))) return;
+  showMode();
+  const r = await fetch('/api/tune', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                      body: JSON.stringify({cfg: {[i.dataset.t]: tuneValue(i)}})});
+  const j = await r.json().catch(() => ({}));
+  el('tuneState').textContent = (j.live ? 'applied LIVE: ' : 'saved for the next run: ') + i.dataset.t + ' = ' + tuneValue(i);
+}));
+async function loadPreset(name) {
+  const cfg = S.rail.presets[name];
+  const r = await fetch('/api/tune', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({cfg})});
+  const j = await r.json().catch(() => ({}));
+  tFilled = false;
+  el('tuneState').textContent = (j.live ? 'applied LIVE: ' : 'loaded: ') + 'recommended ' + name.toUpperCase();
+}
+function trimBy(dv) {
+  const i = document.querySelector('[data-t="level_trim_deg"]');
+  i.value = (Math.round(((+i.value || 0) + dv) * 10) / 10).toFixed(1);
+  i.dispatchEvent(new Event('change'));
+}
+let tFilled = false;
+function fillTune() {
+  const ae = document.activeElement;
+  if (tFilled || (ae && ae.closest && ae.closest('#rctlCard'))) return;
+  const c = S.rail.cfg;
+  document.querySelectorAll('[data-t]').forEach(i => {
+    const v = c[i.dataset.t];
+    if (v === undefined) return;
+    if (i.type === 'checkbox') i.checked = !!v; else i.value = v;
+  });
+  showMode();
+  tFilled = true;
+}
+function saveRail() {
+  const cfg = {axis: el('r_axis').value, hand_yaw_deg: +el('r_yaw').value};
+  cfg.rate_hz = +el('r_rate_hz').value;
+  cfg.channels = [...document.querySelectorAll('#r_chs input')].filter(i => i.checked).map(i => +i.dataset.j);
+  const points = el('r_points').value.split(/[ ,;]+/).filter(v => v !== '').map(Number).filter(v => isFinite(v));
+  post('/api/railsettings', {cfg, points, wrist_scale: el('r_wrist').value}).then(() => { rFilled = false; el('rcfgState').textContent = 'saved'; });
+}
+function rChannels(axis, checked) {
+  el('r_chs').innerHTML = S.rail.axes[axis].allowed.map(j =>
+    `<label><input type="checkbox" data-j="${j}" style="width:auto" ${checked.includes(j) ? 'checked' : ''}> ${JN(j)}</label>`).join(' ');
+}
+el('r_axis').addEventListener('change', () => {
+  const ax = S.rail.axes[el('r_axis').value];
+  rChannels(el('r_axis').value, ax.channels);
+});
+function fillRail() {
+  const ae = document.activeElement;
+  if (rFilled || (ae && ae.closest && ae.closest('#rcfgCard'))) return;
+  const c = S.rail.cfg;
+  el('r_axis').value = c.axis;
+  el('r_yaw').value = String(Math.round(c.hand_yaw_deg || 0));
+  el('r_rate_hz').value = String(Math.round(c.rate_hz));
+  rChannels(c.axis, c.channels);
+  el('r_wrist').value = String(Math.round(S.calib.wrist_scale));
+  el('r_points').value = S.rail.points.join(', ');
+  const ax = S.rail.axes[c.axis];
+  el('r_pointsHint').textContent = `+ is toward ${ax.plus}`;
+  rFilled = true;
+}
+document.querySelectorAll('#rcfgCard input, #rcfgCard select').forEach(i => i.addEventListener('input', () => el('rcfgState').textContent = 'unsaved'));
+function renderRail(css) {
+  fillRail();
+  fillTune();
+  const R = S.rail, M = R.map, axis = R.cfg.axis;
+  el('rmapCard').innerHTML = M ? `
+      <span>axis</span><span>${R.axes[M.axis || axis].name}</span>
+      <span>sensing on</span><span>${M.channels.map(JN).join(' + ')}</span>
+      ${M.channels.map((j, i) => `<span>slope ${JN(j)}</span><span class="${M.ratio[i] >= 0.6 && M.ratio[i] <= 1.3 ? 'ok' : 'badc'}">${(M.b[i] * 10).toFixed(1)} mNm/cm (${(M.ratio[i] * 100).toFixed(0)} % of kinematic)</span>`).join('')}
+      <span>error at the points</span><span>${M.err_mm.map(v => (v >= 0 ? '+' : '') + v.toFixed(0)).join(' / ')} mm</span>
+      <span>error rms</span><span>${M.rms_mm.toFixed(1)} mm</span>
+      <span>drift (empty again)</span><span>${M.drift_mm !== undefined ? M.drift_mm.toFixed(1) + ' mm' : '–'}</span>
+      <span>noise still, per sample</span><span>${M.noise_mm.toFixed(1)} mm</span>
+      <span>rail map</span><span>${verdictSpan(M.verdict)}</span>
+      <span>noise while rocking (sweep)</span><span>${M.moving_noise_mm !== undefined ? M.moving_noise_mm.toFixed(0) + ' mm' : 'no sweep yet'}</span>
+      <span>moving</span><span>${verdictSpan(M.moving_verdict)}</span>
+      ${(M.notes || []).map(n => `<span class="warnc">note</span><span class="warnc">${n}</span>`).join('')}`
+    : '<span>rail map</span><span>not recorded yet</span>';
+  el('rsweepState').textContent = R.swept ? (R.sweep_stale ? 'done, but settings changed since: redo' : 'done') : 'not done yet';
+  const L = S.live, lastNum = arr => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i] !== null) return arr[i]; return null; };
+  const bal = S.busy === 'rail_balance' || S.busy === 'rail_probe';
+  const mapping = S.busy === 'rail_map';
+  el('r_atGoal').disabled = !bal;
+  const pb = (bal || mapping) ? lastNum(L.estx) : (!S.busy ? lastNum(L.railidle) : null);
+  el('rdeckHint').innerHTML = mapping
+    ? (pb === null ? 'Map: no ball on the paddle.' : `<b>Map: ball at ${(pb * 1000 >= 0 ? '+' : '') + (pb * 1000).toFixed(0)} mm from C</b> (physics, relative to where C read). Put it on the mark the yellow bar asks for.`)
+    : 'While balancing: click where the ball really is.';
+  // deck: screen x = -paddle y, screen y = -paddle x. A point p along the rail:
+  const XY = p => axis === 'y' ? [-p, 0] : [0, -p];
+  const h = S.calib.plate_half * 1000, Rb = S.calib.ball_radius * 1000;
+  const ink2 = css.getPropertyValue('--ink2'), acc = css.getPropertyValue('--accent'), c6 = css.getPropertyValue('--c6');
+  let s = `<rect x="${-h}" y="${-h}" width="${2 * h}" height="${2 * h}" rx="6" fill="none" stroke="${ink2}" stroke-width="1.2"/>`;
+  s += `<rect x="-17.5" y="${h}" width="35" height="21" fill="none" stroke="${ink2}" stroke-width="1.2"/>`;
+  s += `<text x="0" y="${h + 36}" font-size="9" text-anchor="middle" fill="${ink2}">tab · robot side</text>`;
+  const r = Rb + 3;
+  if (axis === 'y') {
+    s += `<line x1="${-h}" y1="${-r}" x2="${h}" y2="${-r}" stroke="${ink2}" stroke-width="3" stroke-opacity=".5"/><line x1="${-h}" y1="${r}" x2="${h}" y2="${r}" stroke="${ink2}" stroke-width="3" stroke-opacity=".5"/>`;
+    s += `<text x="${-h + 4}" y="${-r - 6}" font-size="9" fill="${ink2}">+ left</text><text x="${h - 4}" y="${-r - 6}" font-size="9" text-anchor="end" fill="${ink2}">right −</text>`;
+  } else {
+    s += `<line x1="${-r}" y1="${-h}" x2="${-r}" y2="${h}" stroke="${ink2}" stroke-width="3" stroke-opacity=".5"/><line x1="${r}" y1="${-h}" x2="${r}" y2="${h}" stroke="${ink2}" stroke-width="3" stroke-opacity=".5"/>`;
+    s += `<text x="${r + 4}" y="${-h + 10}" font-size="9" fill="${ink2}">+ far edge</text>`;
+  }
+  R.points.forEach(p => { const [x, y] = XY(p); s += `<circle cx="${x}" cy="${y}" r="3" fill="${R.mapped ? acc : 'none'}" stroke="${acc}"/><text x="${x + 3}" y="${y + (axis === 'y' ? r + 12 : 3)}" font-size="8" fill="${ink2}">${p}</text>`; });
+  const [gx, gy] = XY(+R.cfg.goal_mm || 0);
+  s += axis === 'y' ? `<line x1="${gx}" y1="${-r - 8}" x2="${gx}" y2="${r + 8}" stroke="${acc}" stroke-dasharray="3 3"/>`
+                    : `<line x1="${-r - 8}" y1="${gy}" x2="${r + 8}" y2="${gy}" stroke="${acc}" stroke-dasharray="3 3"/>`;
+  if (pb !== null) { const [x, y] = XY(pb * 1000); s += `<circle cx="${x}" cy="${y}" r="${Rb}" fill="${c6}" fill-opacity=".18" stroke="${c6}" stroke-width="2"/>`; }
+  el('rdeck').innerHTML = s;
+  const mm = a => a.map(v => v === null ? null : v * 1000);
+  plot(el('cR'), L.t, [{data: bal ? mm(L.estx) : mm(L.railidle), color: css.getPropertyValue('--c5')}, {data: mm(L.measx), color: c6}], {digits: 0, min: 20});
+  const ti = axis === 'y' ? [L.tilta, L.tiltcmda] : [L.tiltb, L.tiltcmdb];
+  plot(el('cRT'), L.t, [{data: ti[0], color: css.getPropertyValue('--c5')}, {data: ti[1], color: c6}], {digits: 2, min: 0.5});
 }
 
 // ------------------------------------------------------------------ points table
@@ -345,8 +649,13 @@ function render() {
   el('mode').textContent = S.mode; el('mode').className = 'badge' + (S.mode === 'ROBOT' ? ' robot' : '');
   el('status').textContent = S.busy ? `busy: ${S.status}` : 'idle';
   el('stopBtn').disabled = !S.busy;
-  document.querySelectorAll('[data-job], .tab button.primary, .tab button.moves').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
-  el('prompt').classList.toggle('on', !!S.prompt); el('promptMsg').textContent = S.prompt || '';
+  document.querySelectorAll('[data-job], [data-r], .tab button.primary, .tab button.moves').forEach(b => { if (!b.closest('#prompt')) b.disabled = !!S.busy; });
+  const stale = S.code_stale || [];
+  el('stale').style.display = stale.length ? 'block' : 'none';
+  el('stale').textContent = stale.length ? `The code changed since app.py started (${stale.join(', ')}): the robot still runs the OLD version. ` +
+    'When idle: Ctrl-C in the terminal, then python3 app.py, then reload this page.' : '';
+  el('prompt').classList.toggle('on', !!S.prompt);
+  document.body.classList.toggle('prompting', !!S.prompt); el('promptMsg').textContent = S.prompt || '';
   if (document.activeElement !== el('tiltMax')) el('tiltMax').value = S.calib.tilt_max_deg;
   if (document.activeElement !== el('wristScale')) el('wristScale').value = String(Math.round(S.calib.wrist_scale));
   if (document.activeElement !== el('jointWatch')) el('jointWatch').value = S.calib.joint_watch;
@@ -392,6 +701,8 @@ function render() {
   plot(el('cPos'), L.t, [{data: L.estx.map((v, i) => v !== null ? v * 1000 : (L.measx[i] !== null ? L.measx[i] * 1000 : null)), color: css.getPropertyValue('--c5')},
                          {data: L.esty.map((v, i) => v !== null ? v * 1000 : (L.measy[i] !== null ? L.measy[i] * 1000 : null)), color: css.getPropertyValue('--c6')}], {digits: 0, min: 20});
   plot(el('cTilt'), L.t, [{data: L.tilta, color: css.getPropertyValue('--c5')}, {data: L.tiltb, color: css.getPropertyValue('--c6')}], {digits: 1, min: 1});
+
+  if (S.rail) renderRail(css);
 
   const log = el('log'), atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
   log.textContent = S.logs.join('\n');
