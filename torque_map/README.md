@@ -7,7 +7,7 @@ Everything runs from a web page.
 
 | | |
 |---|---|
-| **Best result so far** | **94.6 s** with no drop, recovering from small pushes; 20 mm rms (iam-bruno, Nov 24 2026) |
+| **Best result** | **175.9 s (~3 min) with no drop while pushed 54 times**; back to the centre after 48 pushes, up to ~220 mm/s and from the rail end, median recovery 1.4 s (iam-bruno, Nov 24 2026, log `railbalance_y_1124_221351.npz`, calibration in `calibration/iam-bruno_2026-11-24.json`) |
 | **Sensing noise** | about 4 mm per sample while the paddle moves, 100 samples per second |
 | **Ball** | solid, 74.5 mm, 193 g, in a rail of two sticks on a 233 mm printed deck |
 | **Robot station** | lab PC iam-bruno (172.26.18.213), control PC iam-snowwhite |

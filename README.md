@@ -3,9 +3,13 @@
 A Franka Panda arm balances a ball on a hand-held paddle **without a camera**: the ball is sensed through the arm's
 own joint torque sensors. The repository has two parts.
 
+> **Headline result (Nov 24 2026, iam-bruno):** the 193 g ball balanced in a rail for **175.9 s (~3 min) without a
+> drop**, sensed by joint torques only, while being pushed **54 times**. The ball returned to the centre after 48 of
+> them, including pushes up to ~220 mm/s and runs all the way to the rail end (median recovery 1.4 s).
+
 | Part | Where | Status |
 |---|---|---|
-| **Real-robot balancer** (ball in a rail, one axis) | [`torque_map/`](torque_map/README.md) | runs on the lab arm from a web page; best hold **55 s** with the 193 g ball |
+| **Real-robot balancer** (ball in a rail, one axis) | [`torque_map/`](torque_map/README.md) | runs on the lab arm from a web page; best run **175.9 s** with 54 pushes |
 | **Simulation and controller studies** (MuJoCo, two axes) | repository root, `studies/`, `hardware/` | PD, Kalman + PD, LQR and MPC compared on the printed tray; [results](RESULTS.md) |
 
 **Start here:**

@@ -1,5 +1,11 @@
 # Lab notes: torque-sensed rail balancer
 
+> **Best run: Nov 24 2026 22:15–22:18 on iam-bruno: 175.9 s without a drop, pushed 54 times, back to the centre after
+> 48 of them (up to ~220 mm/s, and from the rail end; median recovery 1.4 s).** Code `9a991aa`; settings: smooth
+> preset (Kp 1.0, Kv 2.0, max ball speed 20 mm/s, max tilt 1.2°, look-ahead 0.35 s), rolling gain 1.0, level trim
+> −0.85°, still-ball hold 12 mm / 15 mm/s, emergency brake 2.5° (used 7 s in total). Calibration:
+> `calibration/iam-bruno_2026-11-24.json`; log `railbalance_y_1124_221351.npz` on the robot PC.
+
 What we measured, what failed, and why each setting is what it is. Newest first. All numbers come from the logs in
 `torque_map/logs/` on the robot PC (`railbalance_*`, `railmap_*`, `railsweep_*`, `railroll_*`, `session_*.log`).
 
@@ -33,6 +39,8 @@ sample**; **level trim −0.85°** by phone level (the balancing-log estimate of
 
 Settings of the 21:52 run: rolling gain 1.0, Kp 1.0, Kv 2.0, max ball speed 20 mm/s, max tilt 1.2°, look-ahead
 0.35 s, level −0.85°, still-ball hold 12 mm / 15 mm/s.
+
+| **22:15** | **175.9 s, best run: 54 pushes, 48 returned to the centre** | the consistent-reading acceptance, push detection and emergency brake (7 s of use in total) caught pushes up to ~220 mm/s and balls that reached the rail end. One drop at the end |
 
 Lesson: every time the controller was made more aggressive (lower rolling gain, higher ball speed or tilt) the plate
 swung more. The real rolling gain is probably near 1.0.
